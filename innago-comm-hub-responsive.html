@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Innago — Communication Hub (Responsive)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #F4F5F6; height: 100vh; overflow: hidden; }
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 2px; }
+
+/* ============================================ */
+/* LAYOUT                                       */
+/* ============================================ */
+.hub { display: flex; height: 100vh; position: relative; }
+.col1 { width: 288px; flex-shrink: 0; background: #fff; border-right: 1px solid #E5E7EB; display: flex; flex-direction: column; z-index: 2; }
+.col2 { flex: 1; min-width: 0; display: flex; flex-direction: column; background: #F4F5F6; z-index: 1; }
+.col3 { width: 320px; flex-shrink: 0; background: #fff; border-left: 1px solid #E5E7EB; overflow-y: auto; height: 100vh; z-index: 3; }
+
+/* Col 3 Drawer mode (tablet + mobile) */
+.col3-drawer-mode .col3 { position: fixed; top: 0; right: -320px; height: 100vh; width: 320px; box-shadow: -4px 0 20px rgba(0,0,0,0.08); transition: right 0.2s ease; z-index: 100; }
+.col3-drawer-mode .col3.open { right: 0; }
+.col3-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 99; opacity: 0; transition: opacity 0.2s; }
+.col3-backdrop.visible { display: block; opacity: 1; }
+
+/* Mobile: stacked navigation */
+.mobile-mode .col1 { width: 100%; position: absolute; inset: 0; transition: transform 0.25s ease-out; z-index: 10; }
+.mobile-mode .col2 { width: 100%; position: absolute; inset: 0; transform: translateX(100%); transition: transform 0.25s ease-out; z-index: 11; }
+.mobile-mode.show-conv .col1 { transform: translateX(-30%); opacity: 0.5; pointer-events: none; }
+.mobile-mode.show-conv .col2 { transform: translateX(0); }
+
+/* Back button — mobile only */
+.back-btn { display: none; background: none; border: none; cursor: pointer; padding: 8px; margin-right: 4px; color: #0C2D3F; flex-shrink: 0; }
+
+/* Context panel toggle — tablet + mobile */
+.ctx-toggle { display: none; background: none; border: 1px solid #D1D5DB; border-radius: 7px; cursor: pointer; padding: 6px 8px; color: #6B7280; flex-shrink: 0; }
+.ctx-toggle:hover { background: #F9FAFB; color: #374151; }
+
+/* Drawer close button */
+.drawer-close { position: absolute; top: 16px; right: 16px; background: none; border: none; cursor: pointer; color: #9CA3AF; padding: 4px; z-index: 5; }
+.drawer-close:hover { color: #374151; }
+
+/* ============================================ */
+/* COL 1                                        */
+/* ============================================ */
+.col1-header { padding: 20px 16px 12px; border-bottom: 1px solid #E5E7EB; flex-shrink: 0; }
+.col1-title { font-size: 18px; font-weight: 600; color: #0C2D3F; margin-bottom: 12px; }
+.search-input { background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 8px; padding: 8px 12px 8px 34px; font-size: 13px; color: #374151; width: 100%; font-family: inherit; }
+.search-input::placeholder { color: #9CA3AF; }
+.search-input:focus { outline: none; border-color: #1A5235; background: #fff; }
+.search-wrap { position: relative; }
+.search-wrap svg { position: absolute; left: 10px; top: 9px; color: #9CA3AF; }
+.filter-tabs { display: flex; margin-top: 12px; border-bottom: 1px solid #F3F4F6; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.filter-tabs::-webkit-scrollbar { display: none; }
+.filter-tab { padding: 6px 14px; font-size: 13px; font-weight: 500; color: #6B7280; cursor: pointer; border: none; background: none; border-bottom: 2px solid transparent; font-family: inherit; transition: all 0.15s; white-space: nowrap; flex-shrink: 0; }
+.filter-tab.active { color: #1A5235; border-bottom-color: #1A5235; }
+.filter-tab:hover:not(.active) { color: #374151; }
+.conv-list { flex: 1; overflow-y: auto; }
+.conv-card { padding: 12px 16px; cursor: pointer; border-left: 3px solid transparent; transition: background 0.1s; border-bottom: 1px solid #F3F4F6; min-height: 48px; }
+.conv-card:hover { background: #F9FAFB; }
+.conv-card.selected { background: #fff; border-left-color: #1A5235; }
+.conv-card .row { display: flex; align-items: flex-start; gap: 10px; }
+.avatar { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #fff; overflow: hidden; position: relative; }
+.avatar img { width: 100%; height: 100%; object-fit: cover; }
+.online-dot { width: 9px; height: 9px; background: #22C55E; border-radius: 50%; border: 2px solid #fff; position: absolute; bottom: -1px; right: -1px; }
+.unread-dot { width: 8px; height: 8px; background: #22C55E; border-radius: 50%; flex-shrink: 0; }
+.card-name { font-size: 14px; font-weight: 500; color: #0C2D3F; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-meta { font-size: 12px; color: #6B7280; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-preview { font-size: 12px; color: #6B7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 4px; display: flex; align-items: center; gap: 6px; }
+.card-time { font-size: 12px; color: #9CA3AF; white-space: nowrap; flex-shrink: 0; }
+.chip { display: inline-flex; align-items: center; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.03em; text-transform: uppercase; flex-shrink: 0; }
+.chip-chat { background: #EEF2FF; color: #4338CA; }
+.chip-email { background: #E0F3F5; color: #0E6B7A; }
+.chip-sms { background: #F5F0FF; color: #6D28D9; }
+.chip-post { background: #FFF7ED; color: #9A3412; }
+.chip-system { background: #F3F4F6; color: #374151; border: 1px solid #E5E7EB; }
+.label-chip { display: inline-flex; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.03em; margin-top: 6px; }
+.label-maintenance { background: #FFF3E0; color: #B45309; }
+.label-billing { background: #EEF2FF; color: #4338CA; }
+.label-lease { background: #F0FDF4; color: #166534; }
+.label-system { background: #F3F4F6; color: #374151; }
+.new-msg-btn { background: #0C2D3F; color: #fff; font-size: 13px; font-weight: 500; padding: 10px; border-radius: 8px; cursor: pointer; text-align: center; border: none; width: 100%; font-family: inherit; }
+.new-msg-btn:hover { background: #0E3A50; }
+.col1-footer { padding: 12px 16px; border-top: 1px solid #E5E7EB; flex-shrink: 0; }
+
+/* ============================================ */
+/* COL 2 HEADER                                 */
+/* ============================================ */
+.col2-header { background: #fff; border-bottom: 1px solid #E5E7EB; padding: 16px 24px; flex-shrink: 0; }
+.header-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.header-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.header-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.header-name { font-size: 16px; font-weight: 600; color: #0C2D3F; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.header-status { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; background: #E8F4ED; color: #1A5235; flex-shrink: 0; }
+.header-sub { font-size: 12px; color: #6B7280; margin-top: 3px; display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.header-online { color: #22C55E; font-weight: 500; }
+.header-offline { color: #9CA3AF; }
+.btn-secondary { background: #fff; color: #0C2D3F; font-size: 13px; font-weight: 500; padding: 7px 14px; border-radius: 7px; border: 1px solid #D1D5DB; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.btn-secondary:hover { background: #F9FAFB; }
+.btn-primary { background: #0C2D3F; color: #fff; font-size: 13px; font-weight: 500; padding: 7px 16px; border-radius: 7px; border: none; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.btn-primary:hover { background: #0E3A50; }
+.overflow-menu { display: none; background: none; border: 1px solid #D1D5DB; border-radius: 7px; cursor: pointer; padding: 7px 10px; color: #6B7280; font-size: 16px; font-weight: 600; line-height: 1; font-family: inherit; }
+.overflow-menu:hover { background: #F9FAFB; }
+.email-meta-row { margin-top: 12px; padding-top: 12px; border-top: 1px solid #F3F4F6; }
+.email-subject { font-size: 16px; font-weight: 600; color: #0C2D3F; margin-bottom: 4px; }
+.email-fromto { font-size: 12px; color: #6B7280; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.encrypted-badge { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px; background: #E8F4ED; color: #1A5235; text-transform: uppercase; letter-spacing: 0.03em; }
+.sms-phone { font-size: 14px; color: #0C2D3F; font-weight: 500; margin-top: 4px; }
+.sms-optin { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; background: #E8F4ED; color: #1A5235; display: inline-flex; align-items: center; gap: 4px; }
+.post-title { font-size: 18px; font-weight: 600; color: #0C2D3F; margin-bottom: 4px; }
+.post-author { font-size: 12px; color: #6B7280; }
+.post-audience { display: inline-flex; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; background: #F5F0FF; color: #6D28D9; margin-top: 6px; }
+
+/* ============================================ */
+/* COL 2 BODY                                   */
+/* ============================================ */
+.col2-body { flex: 1; overflow-y: auto; padding: 20px 24px; }
+.date-divider { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.date-divider span { font-size: 12px; color: #9CA3AF; font-weight: 500; letter-spacing: 0.05em; white-space: nowrap; }
+.date-divider::before,.date-divider::after { content:''; flex:1; height:1px; background:#E5E7EB; }
+.bubble-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 16px; }
+.bubble-row.landlord { flex-direction: row-reverse; }
+.bubble-avatar { width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #fff; overflow: hidden; }
+.bubble-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.bubble { padding: 12px 16px; font-size: 14px; line-height: 1.6; }
+.bubble.tenant { background: #F3F4F6; color: #111827; border-radius: 4px 16px 16px 16px; max-width: 75%; }
+.bubble.landlord { background: #0C2D3F; color: #fff; border-radius: 16px 4px 16px 16px; max-width: 75%; }
+.bubble.sms-tenant { background: #F3F4F6; color: #111827; border-radius: 4px 16px 16px 16px; max-width: 60%; }
+.bubble.sms-landlord { background: #0C2D3F; color: #fff; border-radius: 16px 4px 16px 16px; max-width: 60%; }
+.bubble-time { font-size: 12px; color: #9CA3AF; margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+.bubble-row.landlord .bubble-time { justify-content: flex-end; }
+.typing-indicator { display: flex; align-items: center; gap: 8px; margin-left: 46px; margin-bottom: 16px; }
+.typing-dots { display: flex; gap: 4px; padding: 8px 12px; background: #F3F4F6; border-radius: 20px; }
+.typing-dots span { width: 6px; height: 6px; border-radius: 50%; background: #9CA3AF; animation: typing 1.2s infinite; }
+.typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes typing { 0%,60%,100%{transform:translateY(0);opacity:.6} 30%{transform:translateY(-4px);opacity:1} }
+.system-event { text-align: center; margin: 16px 0; }
+.system-event span { font-size: 11px; font-weight: 600; color: #6B7280; background: #F3F4F6; padding: 4px 12px; border-radius: 20px; }
+.delivery-delivered { color: #22C55E; }
+.delivery-failed { color: #EF4444; }
+.retry-btn { font-size: 11px; color: #EF4444; font-weight: 500; background: none; border: none; cursor: pointer; text-decoration: underline; font-family: inherit; }
+
+/* Email thread */
+.email-thread { display: flex; flex-direction: column; gap: 2px; }
+.email-card { background: #fff; border: 1px solid #E5E7EB; border-radius: 8px; overflow: hidden; }
+.email-card:last-child { border-color: #C7D2D8; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+.email-card-collapsed { padding: 10px 16px; display: flex; align-items: center; cursor: pointer; gap: 12px; height: 44px; }
+.email-card-collapsed:hover { background: #F9FAFB; }
+.email-sender-col { display: flex; align-items: center; gap: 8px; width: 160px; flex-shrink: 0; }
+.email-sender-avatar { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 600; color: #fff; flex-shrink: 0; }
+.email-card-sender { font-size: 13px; font-weight: 500; color: #0C2D3F; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.email-card-preview { font-size: 13px; color: #9CA3AF; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.email-card-time { font-size: 11px; color: #9CA3AF; white-space: nowrap; flex-shrink: 0; }
+.email-card-attach-icon { color: #9CA3AF; flex-shrink: 0; display: flex; }
+.email-card-expanded { padding: 20px 24px; }
+.email-expanded-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 16px; }
+.email-expanded-sender { font-size: 14px; font-weight: 600; color: #0C2D3F; }
+.email-expanded-email { font-size: 12px; color: #9CA3AF; margin-top: 1px; }
+.email-expanded-time { font-size: 12px; color: #9CA3AF; }
+.email-body-text { font-size: 14px; line-height: 1.7; color: #374151; }
+.email-body-text p { margin-bottom: 12px; }
+.email-body-text p:last-child { margin-bottom: 0; }
+.attachment-row { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+.attachment-card { border: 1px solid #E5E7EB; border-radius: 8px; padding: 10px 12px; display: flex; align-items: center; gap: 10px; background: #FAFAFA; min-width: 160px; flex: 1; max-width: 260px; cursor: pointer; }
+.attachment-card:hover { background: #F3F4F6; }
+.att-icon { width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.att-icon.img { background: #FEF3C7; }
+.att-icon.pdf { background: #FEE2E2; }
+.att-name { font-size: 12px; font-weight: 500; color: #374151; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.att-size { font-size: 11px; color: #9CA3AF; }
+.email-quoted { margin-top: 14px; padding: 10px 14px; border-left: 3px solid #E5E7EB; color: #9CA3AF; font-size: 13px; line-height: 1.5; cursor: pointer; }
+.email-quoted:hover { background: #F9FAFB; color: #6B7280; }
+.email-reply-bar { display: flex; align-items: center; justify-content: center; padding: 12px; margin-top: 8px; }
+.email-reply-btn { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: #0C2D3F; background: #fff; border: 1px solid #D1D5DB; padding: 8px 20px; border-radius: 20px; cursor: pointer; font-family: inherit; }
+.email-reply-btn:hover { background: #F3F4F6; }
+.email-chevron { transition: transform 0.2s; color: #9CA3AF; flex-shrink: 0; display: flex; }
+.email-chevron.open { transform: rotate(180deg); }
+
+/* Post */
+.post-content-card { background: #fff; border: 1px solid #E5E7EB; border-radius: 10px; padding: 24px; margin-bottom: 16px; }
+.post-body { font-size: 14px; line-height: 1.7; color: #374151; }
+.post-body p { margin-bottom: 12px; }
+.post-body p:last-child { margin-bottom: 0; }
+.post-body strong { font-weight: 600; color: #0C2D3F; }
+.read-receipt-section { background: #fff; border: 1px solid #E5E7EB; border-radius: 10px; padding: 16px 20px; }
+.read-receipt-text { font-size: 14px; font-weight: 500; color: #0C2D3F; }
+.read-receipt-sub { font-size: 12px; color: #6B7280; margin-top: 2px; }
+.remind-all-btn { font-size: 12px; font-weight: 500; color: #0C2D3F; background: #fff; border: 1px solid #D1D5DB; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-family: inherit; }
+.progress-bar { height: 6px; background: #E5E7EB; border-radius: 3px; margin-bottom: 14px; overflow: hidden; }
+.progress-fill { height: 100%; background: #1A5235; border-radius: 3px; }
+.delivery-breakdown { font-size: 12px; color: #6B7280; margin-bottom: 14px; display: flex; gap: 12px; flex-wrap: wrap; }
+.tenant-read-list { border-top: 1px solid #F3F4F6; }
+.tenant-read-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #F3F4F6; gap: 8px; }
+.tenant-read-row:last-child { border-bottom: none; }
+.tenant-read-name { font-size: 13px; font-weight: 500; color: #0C2D3F; }
+.tenant-read-unit { font-size: 12px; color: #6B7280; }
+.tenant-read-status { font-size: 12px; }
+.tenant-read-status.read { color: #1A5235; }
+.tenant-read-status.unread { color: #9CA3AF; }
+.send-reminder-btn { font-size: 11px; font-weight: 500; color: #0E6B7A; background: #E0F3F5; border: none; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-family: inherit; flex-shrink: 0; }
+.toggle-list-btn { font-size: 12px; color: #1A5235; font-weight: 500; background: none; border: none; cursor: pointer; font-family: inherit; padding: 0; margin-top: 8px; }
+
+/* ============================================ */
+/* COMPOSE                                      */
+/* ============================================ */
+.col2-compose { background: #fff; border-top: 1px solid #E5E7EB; padding: 16px 24px 20px; flex-shrink: 0; }
+.ai-block { background: #F0FDF8; border: 1px solid #A7F3D0; border-radius: 8px; padding: 12px; margin-bottom: 12px; animation: aiFadeIn 0.2s ease; }
+@keyframes aiFadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+.ai-label { font-size: 11px; font-weight: 600; color: #059669; letter-spacing: 0.04em; display: flex; align-items: center; gap: 6px; }
+.ai-draft { font-size: 14px; color: #6B7280; font-style: italic; line-height: 1.5; margin: 8px 0 10px; }
+.ai-actions { display: flex; gap: 8px; }
+.ai-use-btn { background: #1A5235; color: #fff; font-size: 12px; font-weight: 500; padding: 5px 12px; border-radius: 6px; border: none; cursor: pointer; font-family: inherit; }
+.ai-use-btn:hover { background: #155C3A; }
+.ai-dismiss-btn { background: #fff; color: #6B7280; font-size: 12px; font-weight: 500; padding: 5px 12px; border-radius: 6px; border: 1px solid #D1D5DB; cursor: pointer; font-family: inherit; }
+.compose-box { border: 1px solid #E5E7EB; border-radius: 10px; background: #fff; padding: 12px; transition: border-color 0.15s, box-shadow 0.15s; }
+.compose-box:focus-within { border-color: #1A5235; box-shadow: 0 0 0 3px rgba(26,82,53,0.08); }
+.compose-email-fields { margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #F3F4F6; }
+.compose-field { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 4px 0; }
+.compose-field label { color: #9CA3AF; font-weight: 500; min-width: 52px; }
+.compose-field span { color: #374151; }
+.compose-field input { border: none; outline: none; font-size: 13px; color: #374151; flex: 1; font-family: inherit; background: transparent; }
+.compose-toolbar { display: flex; align-items: center; gap: 2px; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #F3F4F6; }
+.compose-toolbar button { padding: 6px; border-radius: 4px; border: none; background: none; cursor: pointer; color: #9CA3AF; display: flex; align-items: center; }
+.compose-toolbar button:hover { background: #F3F4F6; color: #6B7280; }
+.compose-toolbar .divider { width: 1px; height: 16px; background: #E5E7EB; margin: 0 4px; }
+.compose-textarea { width: 100%; border: none; outline: none; resize: none; font-size: 14px; color: #111827; font-family: inherit; background: transparent; line-height: 1.5; }
+.compose-textarea::placeholder { color: #9CA3AF; }
+.compose-footer { display: flex; align-items: center; margin-top: 8px; gap: 8px; flex-wrap: wrap; }
+.compose-channel-lock { font-size: 11px; color: #6B7280; display: flex; align-items: center; gap: 4px; }
+.compose-hint { font-size: 11px; color: #9CA3AF; }
+.char-counter { font-size: 12px; font-weight: 500; }
+.char-counter.ok { color: #1A5235; }
+.char-counter.warn { color: #D97706; }
+.char-counter.over { color: #EF4444; }
+.send-btn { background: #1A5235; color: #fff; font-size: 13px; font-weight: 500; padding: 8px 18px; border-radius: 7px; border: none; cursor: pointer; font-family: inherit; display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin-left: auto; }
+.send-btn:hover { background: #155C3A; }
+.compose-disabled-msg { font-size: 13px; color: #9CA3AF; text-align: center; padding: 12px; }
+
+/* ============================================ */
+/* COL 3 CONTENT                                */
+/* ============================================ */
+.col3 .section-label { font-size: 11px; font-weight: 600; color: #9CA3AF; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 12px; }
+.context-card { background: #F9FAFB; border-radius: 12px; padding: 16px; border: 1px solid #E5E7EB; margin-bottom: 20px; }
+.context-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+.context-row-icon { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #1A5235; }
+.context-row-label { font-size: 12px; color: #9CA3AF; }
+.context-row-value { font-size: 12px; font-weight: 500; color: #0C2D3F; }
+.context-row-value.lg { font-size: 14px; font-weight: 600; }
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #E5E7EB; }
+.stat-cell { background: #fff; border-radius: 8px; padding: 10px; border: 1px solid #E5E7EB; text-align: center; }
+.stat-cell .val { font-size: 14px; font-weight: 600; color: #0C2D3F; }
+.stat-cell .lbl { font-size: 11px; color: #9CA3AF; margin-top: 2px; }
+.insurance-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #E5E7EB; flex-wrap: wrap; }
+.insurance-badge { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; background: #E8F4ED; color: #1A5235; }
+.sentiment-bar { height: 6px; border-radius: 3px; background: #E5E7EB; }
+.sentiment-fill { height: 6px; border-radius: 3px; background: #1A5235; }
+.activity-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #F3F4F6; }
+.activity-row:last-child { border-bottom: none; }
+.status-chip { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px; text-transform: uppercase; }
+.status-open { background: #FEE2E2; color: #991B1B; }
+.status-pending { background: #FEF3C7; color: #92400E; }
+.status-closed { background: #D1FAE5; color: #065F46; }
+.doc-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #F3F4F6; }
+.doc-row:last-child { border-bottom: none; }
+.delivery-stat-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 12px; color: #374151; }
+.delivery-stat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.recent-post-row { padding: 8px 0; border-bottom: 1px solid #F3F4F6; cursor: pointer; }
+.recent-post-row:last-child { border-bottom: none; }
+.recent-post-title { font-size: 13px; font-weight: 500; color: #0C2D3F; }
+.recent-post-meta { font-size: 11px; color: #9CA3AF; margin-top: 2px; }
+
+/* ============================================ */
+/* TABLET: 768–1279px                           */
+/* ============================================ */
+@media (max-width: 1279px) {
+  .col1 { width: 260px; }
+  .col3 { position: fixed; top: 0; right: -320px; width: 320px; height: 100vh; box-shadow: -4px 0 20px rgba(0,0,0,0.08); transition: right 0.2s ease; z-index: 100; }
+  .col3.open { right: 0; }
+  .ctx-toggle { display: flex; align-items: center; justify-content: center; }
+  .email-sender-col { width: 130px; }
+}
+
+/* ============================================ */
+/* MOBILE: <768px                               */
+/* ============================================ */
+@media (max-width: 767px) {
+  .hub { position: relative; }
+  .col1 { width: 100%; position: absolute; inset: 0; z-index: 10; transition: transform 0.25s ease-out, opacity 0.25s ease-out; }
+  .col2 { width: 100%; position: absolute; inset: 0; transform: translateX(100%); z-index: 11; transition: transform 0.25s ease-out; }
+  .hub.show-conv .col1 { transform: translateX(-30%); opacity: 0.4; pointer-events: none; }
+  .hub.show-conv .col2 { transform: translateX(0); }
+  .col3 { position: fixed; top: 0; right: -85vw; width: 85vw; max-width: 320px; height: 100vh; box-shadow: -4px 0 20px rgba(0,0,0,0.08); transition: right 0.2s ease; z-index: 100; }
+  .col3.open { right: 0; }
+  .back-btn { display: flex; align-items: center; }
+  .ctx-toggle { display: flex; align-items: center; justify-content: center; }
+  .btn-secondary, .btn-primary { display: none; }
+  .overflow-menu { display: flex; align-items: center; justify-content: center; }
+  .col2-body { padding: 16px; }
+  .col2-compose { padding: 12px 16px 16px; }
+  .col2-header { padding: 12px 16px; }
+  .bubble.tenant, .bubble.landlord { max-width: 85%; }
+  .bubble.sms-tenant, .bubble.sms-landlord { max-width: 75%; }
+  .email-sender-col { width: auto; flex-shrink: 1; min-width: 0; }
+  .email-card-preview { display: none; }
+  .email-card-expanded { padding: 16px; }
+  .email-expanded-header { flex-direction: column; gap: 4px; }
+  .post-title { font-size: 16px; }
+  .attachment-card { max-width: none; }
+  .compose-hint { display: none; }
+  .tenant-read-row { flex-direction: column; align-items: flex-start; gap: 4px; }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .col1, .col2, .col3, .col3-backdrop { transition: none !important; }
+  .ai-block { animation: none !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="hub" id="hub">
+  <!-- BACKDROP for drawer -->
+  <div class="col3-backdrop" id="col3-backdrop" onclick="closeDrawer()"></div>
+
+  <!-- COL 1 -->
+  <div class="col1" id="col1">
+    <div class="col1-header">
+      <div class="col1-title">Inbox</div>
+      <div class="search-wrap">
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" placeholder="Search residents or units..." class="search-input">
+      </div>
+      <div class="filter-tabs">
+        <button class="filter-tab active" onclick="setFilter('all',this)">All</button>
+        <button class="filter-tab" onclick="setFilter('chat',this)">Chat</button>
+        <button class="filter-tab" onclick="setFilter('email',this)">Email</button>
+        <button class="filter-tab" onclick="setFilter('sms',this)">SMS</button>
+        <button class="filter-tab" onclick="setFilter('post',this)">Posts</button>
+      </div>
+    </div>
+    <div class="conv-list" id="conv-list"></div>
+    <div class="col1-footer"><button class="new-msg-btn">+ New Message</button></div>
+  </div>
+
+  <!-- COL 2 -->
+  <div class="col2" id="col2">
+    <div class="col2-header" id="col2-header"></div>
+    <div class="col2-body" id="col2-body"></div>
+    <div class="col2-compose" id="col2-compose"></div>
+  </div>
+
+  <!-- COL 3 -->
+  <div class="col3" id="col3">
+    <button class="drawer-close" onclick="closeDrawer()" id="drawer-close" style="display:none">
+      <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
+    </button>
+    <div style="padding:20px" id="col3-inner"></div>
+  </div>
+</div>
+
+<script>
+// === ICONS ===
+const I={send:'<svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>',bold:'<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h8a4 4 0 010 8H6V4zm0 8h9a4 4 0 010 8H6v-8z"/></svg>',italic:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg>',attach:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>',image:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>',emoji:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 13s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>',dblcheck:'<svg width="14" height="11" fill="none" viewBox="0 0 28 24" stroke="currentColor" stroke-width="2.5"><path d="M2 13l4 4L16 7"/><path d="M10 13l4 4L24 7"/></svg>',chevron:'<svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"/></svg>',lock:'<svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>',star:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2L9.5 9.5H2L7.9 13.9L5.8 21L12 16.8L18.2 21L16.1 13.9L22 9.5H14.5L12 2Z" fill="#059669"/></svg>',download:'<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>',file:'<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#6B7280" stroke-width="1.5"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>',imgfile:'<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#D97706" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>',wrench:'<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#6B7280" stroke-width="1.5"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>',bulb:'<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#6B7280" stroke-width="1.5"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>',doc:'<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#6B7280" stroke-width="1.5"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>',shield:'<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#1A5235" stroke-width="2"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>',calendar:'<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#1A5235" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',home:'<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#1A5235" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',dollar:'<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#1A5235" stroke-width="1.5"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm0 0v4m0 12v-4m-6-4h4m8 0h-4"/></svg>',lockSmall:'<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#1A5235" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>',reply:'<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 00-4-4H4"/></svg>',back:'<svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>',info:'<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/></svg>'};
+
+// === DATA ===
+const convs={sarah:{channel:'email',name:'Sarah Jenkins',avatar:'https://randomuser.me/api/portraits/women/32.jpg',initials:'SJ',avatarBg:'#4B5563',status:'Active Tenant',online:true,property:'Skyline Lofts · Unit 402 · 12-month lease',email:{subject:'Re: Kitchen Leak — Unit 402',from:'sarah.jenkins@gmail.com',to:'skyline-lofts@innago.com',encrypted:true},aiDraft:'Hi Sarah, our plumber Steve is confirmed for 2:00 PM today. He\'ll use the master key — no need for you to be home. We\'ll update you once the repair is complete.',prop:{name:'Skyline Lofts',unit:'402 · 2BR/2BA',leaseEnd:'July 31, 2024',leaseLeft:'9 months left',rent:'$2,450.00',rentStatus:'Paid on time',rentColor:'#1A5235',deposit:'$4,900.00'},chipClass:'chip-email',chipLabel:'Email',labelClass:'label-maintenance',labelText:'Maintenance',time:'12:45 PM',preview:'Re: Kitchen Leak — Unit 402',meta:'Unit 402 · Skyline Lofts',hasUnread:true},
+marcus:{channel:'chat',name:'Marcus Rivera',avatar:'https://randomuser.me/api/portraits/men/22.jpg',initials:'MR',avatarBg:'#374151',status:'Active Tenant',online:false,onlineText:'Last seen 2h ago',property:'Riverside Plaza · Unit 108',aiDraft:'Thanks for confirming Marcus! Payment noted. We\'ll send a receipt once it clears — usually 1–2 business days.',prop:{name:'Riverside Plaza',unit:'108 · 1BR/1BA',leaseEnd:'March 15, 2025',leaseLeft:'5 months left',rent:'$1,850.00',rentStatus:'Paid on time',rentColor:'#1A5235',deposit:'$3,700.00'},chipClass:'chip-chat',chipLabel:'Chat',labelClass:'label-billing',labelText:'Billing',time:'2h ago',preview:'Payment for November has been sent via...',meta:'Unit 108 · Riverside Plaza',hasUnread:false},
+jordan:{channel:'sms',name:'Jordan Smith',initials:'JS',avatarBg:'#0C2D3F',status:'Active Tenant',online:false,phone:'+1 (555) 234-5678',smsOptIn:true,property:'Harbor Heights · Unit 204',aiDraft:'Hi Jordan, happy to discuss your renewal. Your current lease runs through February — would you like to set up a time to talk this week?',prop:{name:'Harbor Heights',unit:'204 · 2BR/1BA',leaseEnd:'Feb 28, 2025',leaseLeft:'4 months left',rent:'$2,100.00',rentStatus:'1 day late',rentColor:'#B91C1C',deposit:'$4,200.00'},chipClass:'chip-sms',chipLabel:'SMS',labelClass:'label-lease',labelText:'Lease',time:'Oct 20',preview:'Can we discuss the lease renewal terms?',meta:'Unit 204 · Harbor Heights',hasUnread:false},
+post:{channel:'post',name:'Building Notice',postTitle:'Elevator Maintenance Scheduled — October 28th',postAuthor:'Property Management',postDate:'October 15, 2024 at 9:30 AM',postAudience:'All Tenants — Skyline Lofts',aiDraft:null,chipClass:'chip-post',chipLabel:'Post',labelClass:'label-system',labelText:'System',time:'Oct 15',preview:'Elevator Maintenance — Oct 28th',meta:'All Tenants · Skyline Lofts',hasUnread:false},
+system:{channel:'system',name:'System Alert',property:'Portfolio-wide Notification',chipClass:'chip-system',chipLabel:'System',labelClass:'label-system',labelText:'System',time:'Oct 24',preview:'Scheduled maintenance for elevator...',meta:'Portfolio-wide Notification',hasUnread:false}};
+
+let cur='sarah', readListOpen=false, emailReplyOpen=false, drawerOpen=false;
+const isMobile=()=>window.innerWidth<768;
+
+// === BUILD COL 1 CARDS ===
+function buildCards(){
+  const list=document.getElementById('conv-list');
+  list.innerHTML=Object.entries(convs).map(([id,c])=>{
+    const avHtml=c.avatar?`<div class="avatar" style="background:${c.avatarBg}"><img src="${c.avatar}" onerror="this.style.display='none';this.parentElement.textContent='${c.initials}'" alt="">${c.channel==='chat'&&c.online?'<div class="online-dot"></div>':''}</div>`
+      :c.channel==='post'?`<div class="avatar" style="background:#9A3412"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#fff" stroke-width="1.5"><path d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg></div>`
+      :c.channel==='system'?`<div class="avatar" style="background:#E5E7EB"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#6B7280" stroke-width="1.5"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg></div>`
+      :`<div class="avatar" style="background:${c.avatarBg}">${c.initials}</div>`;
+    return `<div class="conv-card${id===cur?' selected':''}" onclick="selectConv('${id}')" data-type="${c.channel}" id="card-${id}"><div class="row">${avHtml}<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;justify-content:space-between;gap:4px"><span class="card-name">${c.name}</span><div style="display:flex;align-items:center;gap:6px"><span class="chip ${c.chipClass}">${c.chipLabel}</span><span class="card-time">${c.time}</span></div></div><div class="card-meta">${c.meta}</div><div class="card-preview">${c.hasUnread?'<span class="unread-dot"></span> ':''}${c.preview}</div><span class="label-chip ${c.labelClass}">${c.labelText}</span></div></div></div>`;
+  }).join('');
+}
+
+function av(c,sz){const s=sz||44,fs=s<40?'11px':'13px';return c.avatar?`<div class="bubble-avatar" style="width:${s}px;height:${s}px;background:${c.avatarBg};font-size:${fs}"><img src="${c.avatar}" onerror="this.style.display='none';this.parentElement.textContent='${c.initials}'" alt=""></div>`:`<div class="bubble-avatar" style="width:${s}px;height:${s}px;background:${c.avatarBg};font-size:${fs}">${c.initials||''}</div>`;}
+
+// === HEADER ===
+function renderHeader(c){
+  const h=document.getElementById('col2-header');
+  const backBtn=`<button class="back-btn" onclick="goBack()">${I.back}</button>`;
+  const ctxBtn=`<button class="ctx-toggle" onclick="openDrawer()" title="Context panel">${I.info}</button>`;
+  const overflowBtn=`<button class="overflow-menu" title="More options">⋯</button>`;
+
+  if(c.channel==='post'){
+    h.innerHTML=`<div class="header-top">${backBtn}<div style="flex:1;min-width:0"><div class="post-title" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.postTitle}</div><div class="post-author">Posted by ${c.postAuthor} · ${c.postDate}</div><div class="post-audience" style="margin-top:6px">${c.postAudience}</div></div><div class="header-right"><button class="btn-secondary">Edit Post</button><button class="btn-secondary" style="color:#B91C1C;border-color:#FECACA">Delete</button>${overflowBtn}${ctxBtn}</div></div>`;return;
+  }
+  if(c.channel==='system'){
+    h.innerHTML=`<div class="header-top">${backBtn}<div style="width:40px;height:40px;border-radius:50%;background:#E5E7EB;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#6B7280" stroke-width="1.5"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg></div><div style="flex:1;min-width:0"><div class="header-name">System Alert</div><div class="header-sub">${c.property}</div></div><div class="header-right">${ctxBtn}</div></div>`;return;
+  }
+  const online=c.channel==='chat'?(c.online?'<span class="header-online">● Active now</span><span style="color:#D1D5DB">·</span>':`<span class="header-offline">● ${c.onlineText}</span><span style="color:#D1D5DB">·</span>`):'';
+  const od=c.channel==='chat'&&c.online?'<div class="online-dot"></div>':'';
+  const cc=c.channel==='chat'?'chip-chat':c.channel==='email'?'chip-email':'chip-sms';
+  let meta='';
+  if(c.channel==='email') meta=`<div class="email-meta-row"><div class="email-subject">${c.email.subject}</div><div class="email-fromto"><span>${c.email.from}</span><span style="color:#D1D5DB">→</span><span>${c.email.to}</span>${c.email.encrypted?'<span class="encrypted-badge">Encrypted</span>':''}</div></div>`;
+  if(c.channel==='sms') meta=`<div style="margin-top:6px;display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span class="sms-phone">${c.phone}</span>${c.smsOptIn?`<span class="sms-optin"><svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg> SMS Opted In</span>`:''}</div>`;
+  h.innerHTML=`<div class="header-top">${backBtn}<div style="position:relative;flex-shrink:0">${av(c,isMobile()?36:44)}${od}</div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="header-name">${c.name}</span><span class="header-status">${c.status}</span><span class="chip ${cc}">${c.channel.toUpperCase()}</span></div><div class="header-sub">${online}<span style="overflow:hidden;text-overflow:ellipsis">${c.property}</span></div></div><div class="header-right"><button class="btn-secondary">View Lease</button><button class="btn-primary">View Profile</button>${overflowBtn}${ctxBtn}</div></div>${meta}`;
+}
+
+// === BODY (reuse from v3 — same functions) ===
+function renderBody(c){const b=document.getElementById('col2-body');emailReplyOpen=false;if(c.channel==='chat')renderChat(b,c);else if(c.channel==='email')renderEmail(b,c);else if(c.channel==='sms')renderSMS(b,c);else if(c.channel==='post')renderPost(b);else renderSystem(b);}
+
+function renderChat(el,c){el.innerHTML=`<div class="date-divider"><span>TODAY</span></div><div class="bubble-row">${av(c,36)}<div><div class="bubble tenant">Hi there, just wanted to confirm that my November payment has been sent. ACH transfer initiated this morning from my bank. Should clear in 1–2 business days.</div><div class="bubble-time">9:10 AM</div></div></div><div class="bubble-row landlord"><div class="bubble-avatar" style="width:36px;height:36px;background:#0C2D3F;font-size:11px">PM</div><div><div class="bubble landlord">Got it Marcus, thanks for the heads up! We'll confirm once it clears. Let us know if you need a receipt.</div><div class="bubble-time" style="justify-content:flex-end">9:22 AM · Read <span style="color:#22C55E">${I.dblcheck}</span></div></div></div><div class="system-event"><span>PAYMENT #INV-2048 — PROCESSING</span></div><div class="bubble-row">${av(c,36)}<div><div class="bubble tenant">Thanks! Also, is there any chance I can get a breakdown of the charges this month? I noticed it was slightly higher.</div><div class="bubble-time">9:35 AM</div></div></div><div class="typing-indicator"><div class="typing-dots"><span></span><span></span><span></span></div><span style="font-size:12px;color:#9CA3AF;font-style:italic">Marcus is typing...</span></div>`;}
+
+function renderEmail(el,c){el.innerHTML=`<div class="email-thread"><div class="email-card" id="em1"><div class="email-card-collapsed" onclick="toggleEm('em1')"><span class="email-chevron" id="em1-ch">${I.chevron}</span><div class="email-sender-col"><div class="email-sender-avatar" style="background:#4B5563"><img src="https://randomuser.me/api/portraits/women/32.jpg" style="width:100%;height:100%;border-radius:50%;object-fit:cover" onerror="this.style.display='none';this.parentElement.textContent='SJ'"></div><span class="email-card-sender">Sarah Jenkins</span></div><span class="email-card-preview">Hi management, there seems to be a small leak under the kitchen sink...</span><span class="email-card-time">Oct 24</span><span class="email-card-attach-icon">${I.attach}</span></div><div class="email-card-expanded" style="display:none" id="em1-b"><div class="email-expanded-header"><div><div class="email-expanded-sender">Sarah Jenkins</div><div class="email-expanded-email">sarah.jenkins@gmail.com</div></div><span class="email-expanded-time">Oct 24, 9:12 AM</span></div><div class="email-body-text"><p>Hi management,</p><p>There seems to be a small leak under the kitchen sink. I noticed it this morning while doing dishes — water is dripping from the main pipe underneath.</p><p>Could someone please take a look when possible?</p><p>Thanks,<br>Sarah</p></div><div class="attachment-row"><div class="attachment-card"><div class="att-icon img">${I.imgfile}</div><div style="min-width:0"><div class="att-name">kitchen_leak_photo.jpg</div><div class="att-size">1.2 MB</div></div><span style="color:#9CA3AF;cursor:pointer;margin-left:auto">${I.download}</span></div></div></div></div><div class="email-card" id="em2"><div class="email-card-collapsed" onclick="toggleEm('em2')"><span class="email-chevron" id="em2-ch">${I.chevron}</span><div class="email-sender-col"><div class="email-sender-avatar" style="background:#0C2D3F;font-size:8px;color:#fff">PM</div><span class="email-card-sender">Property Mgmt</span></div><span class="email-card-preview">Thanks Sarah. I've logged maintenance request #MR-4092...</span><span class="email-card-time">Oct 24</span></div><div class="email-card-expanded" style="display:none" id="em2-b"><div class="email-expanded-header"><div><div class="email-expanded-sender">Property Management</div><div class="email-expanded-email">skyline-lofts@innago.com</div></div><span class="email-expanded-time">Oct 24, 10:45 AM</span></div><div class="email-body-text"><p>Hi Sarah,</p><p>Thanks for letting us know. I've logged maintenance request <strong>#MR-4092</strong>. Our technician David will be by between 2–4 PM.</p><p>Will you be home, or should we use the master key?</p><p>Best,<br>Skyline Lofts Management</p></div></div></div><div class="email-card" id="em3" style="border-color:#C7D2D8;box-shadow:0 1px 3px rgba(0,0,0,0.06)"><div class="email-card-expanded"><div class="email-expanded-header"><div><div class="email-expanded-sender">Sarah Jenkins</div><div class="email-expanded-email">sarah.jenkins@gmail.com</div></div><span class="email-expanded-time">Today, 12:45 PM</span></div><div class="email-body-text"><p>Hi,</p><p>That would be great — you can use the master key. The leak is under the left side of the sink where the hot water pipe connects.</p><p>Also, could David check the garbage disposal? It's been making a grinding noise.</p><p>Thank you!<br>Sarah</p></div><div class="attachment-row"><div class="attachment-card"><div class="att-icon img">${I.imgfile}</div><div style="min-width:0"><div class="att-name">leak_closeup.jpg</div><div class="att-size">890 KB</div></div><span style="color:#9CA3AF;cursor:pointer;margin-left:auto">${I.download}</span></div><div class="attachment-card"><div class="att-icon pdf"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#B91C1C" stroke-width="1.5"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg></div><div style="min-width:0"><div class="att-name">appliance_warranty.pdf</div><div class="att-size">240 KB</div></div><span style="color:#9CA3AF;cursor:pointer;margin-left:auto">${I.download}</span></div></div></div></div></div><div class="email-reply-bar"><button class="email-reply-btn" onclick="openEmailReply()">${I.reply} Reply</button></div>`;}
+
+function renderSMS(el,c){el.innerHTML=`<div class="date-divider"><span>OCT 20</span></div><div class="bubble-row">${av(c,36)}<div><div class="bubble sms-tenant">Hi, I wanted to ask about my lease renewal. The current lease ends in February and I'd like to discuss options.</div><div class="bubble-time">11:30 AM</div></div></div><div class="bubble-row landlord"><div class="bubble-avatar" style="width:36px;height:36px;background:#0C2D3F;font-size:11px">PM</div><div><div class="bubble sms-landlord">Hi Jordan! Happy to discuss. 12-month or 18-month extensions available. Let me put together the terms.</div><div class="bubble-time" style="justify-content:flex-end"><span class="delivery-delivered" style="display:flex;align-items:center;gap:3px;font-size:11px">${I.dblcheck} Delivered</span> · 11:48 AM</div></div></div><div class="date-divider"><span>OCT 21</span></div><div class="bubble-row landlord"><div class="bubble-avatar" style="width:36px;height:36px;background:#0C2D3F;font-size:11px">PM</div><div><div class="bubble sms-landlord">Renewal options: 12-mo at $2,100/mo or 18-mo at $2,050/mo. Let me know!</div><div class="bubble-time" style="justify-content:flex-end"><span class="delivery-delivered" style="display:flex;align-items:center;gap:3px;font-size:11px">${I.dblcheck} Delivered</span> · 9:15 AM</div></div></div><div class="bubble-row">${av(c,36)}<div><div class="bubble sms-tenant">The 18-month option sounds great!</div><div class="bubble-time">10:22 AM</div></div></div><div class="bubble-row landlord"><div class="bubble-avatar" style="width:36px;height:36px;background:#0C2D3F;font-size:11px">PM</div><div><div class="bubble sms-landlord" style="background:#FEE2E2;color:#991B1B;border:1px solid #FECACA">Your renewal starts March 1st. I'll prepare the paperwork.</div><div class="bubble-time" style="justify-content:flex-end"><span class="delivery-failed" style="font-size:11px">❌ Failed</span><button class="retry-btn" onclick="alert('Queued for retry')">Retry</button> · 10:30 AM</div></div></div>`;}
+
+function renderPost(el){readListOpen=false;el.innerHTML=`<div class="post-content-card"><div class="post-body"><p><strong>Elevator Maintenance Notice</strong></p><p>Please be advised that the building elevator will undergo scheduled maintenance on <strong>October 28th from 8:00 AM to 12:00 PM</strong>.</p><p>Residents on floors 3+ are encouraged to plan accordingly. The stairwell will remain accessible. If you have mobility concerns, please contact management.</p><p>— Skyline Lofts Property Management</p></div></div><div class="read-receipt-section"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px;flex-wrap:wrap"><div><div class="read-receipt-text">Read by 18 of 24 tenants</div><div class="read-receipt-sub">75% read rate</div></div><button class="remind-all-btn" onclick="alert('Reminders sent')">Remind All Unread</button></div><div class="progress-bar"><div class="progress-fill" style="width:75%"></div></div><div class="delivery-breakdown"><span>📱 15 in-app</span><span>✉️ 6 email</span><span>💬 3 SMS</span></div><button class="toggle-list-btn" onclick="toggleReadList()">Show tenant list ↓</button><div id="read-list" style="display:none" class="tenant-read-list">${genReadList()}</div></div>`;}
+function genReadList(){const t=[{n:'Sarah Jenkins',u:'402',r:1,t:'Oct 15, 3:15 PM'},{n:'Marcus Rivera',u:'108',r:1,t:'Oct 15, 4:00 PM'},{n:'Elena Vance',u:'315',r:1,t:'Oct 16, 9:20 AM'},{n:'David Park',u:'201',r:1,t:'Oct 16, 11:30 AM'},{n:'Lisa Chen',u:'505',r:1,t:'Oct 16, 2:45 PM'},{n:'Jordan Smith',u:'204',r:0},{n:'Mike Torres',u:'312',r:0},{n:'Anna Kim',u:'410',r:0}];return t.map(x=>`<div class="tenant-read-row"><div><div class="tenant-read-name">${x.n}</div><div class="tenant-read-unit">Unit ${x.u}</div></div><div style="display:flex;align-items:center;gap:4px"><span class="tenant-read-status ${x.r?'read':'unread'}">${x.r?'Read '+x.t:'Not yet read'}</span>${!x.r?`<button class="send-reminder-btn" onclick="event.stopPropagation();alert('Reminder sent to ${x.n}')">Remind</button>`:''}</div></div>`).join('');}
+function renderSystem(el){el.innerHTML=`<div class="date-divider"><span>OCT 24</span></div><div style="max-width:480px;margin:0 auto"><div style="background:#fff;border-radius:12px;border:1px solid #E5E7EB;padding:24px;text-align:center"><div style="width:48px;height:48px;background:#F3F4F6;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px"><svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#6B7280" stroke-width="1.5"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg></div><div style="font-size:14px;font-weight:500;color:#0C2D3F;margin-bottom:4px">Portfolio-wide System Alert</div><div style="font-size:14px;color:#6B7280;line-height:1.6">Scheduled maintenance for elevator inspection: October 28th, 8:00 AM – 12:00 PM.</div><div style="margin-top:12px;font-size:12px;color:#9CA3AF">Oct 24 · 10:00 AM · Auto-generated</div></div></div>`;}
+
+// === COMPOSE ===
+function renderCompose(c){const el=document.getElementById('col2-compose');if(c.channel==='system'){el.innerHTML='<div class="compose-disabled-msg">System notification — no reply needed.</div>';return;}if(c.channel==='post'){el.innerHTML='<div class="compose-disabled-msg">Posts are broadcast only.</div>';return;}if(c.channel==='email'&&!emailReplyOpen){el.innerHTML='';return;}const ai=c.aiDraft?mkAI(c):'';let fields='',tb='',ph='',sl='',cl='',cc='';if(c.channel==='email'){fields=`<div class="compose-email-fields"><div class="compose-field"><label>To:</label><span>${c.email.from}</span></div><div class="compose-field"><label>Subject:</label><input type="text" value="${c.email.subject}"></div></div>`;tb=mkTB(['bold','italic','divider','attach','image','emoji']);ph='Write your reply...';sl='Send Email';cl=`<span class="compose-channel-lock">${I.lock} Via Email</span>`;}else if(c.channel==='sms'){tb=mkTB(['image']);ph=`SMS to ${c.name.split(' ')[0]}...`;sl='Send SMS';cl=`<span class="compose-channel-lock">${I.lock} Via SMS</span>`;cc='<span class="char-counter ok" id="sms-counter">0 / 160 · 1 seg</span>';}else{tb=mkTB(['bold','italic','divider','attach','image','emoji']);ph=`Message ${c.name.split(' ')[0]}...`;sl='Send';cl=`<span class="compose-channel-lock">${I.lock} Via Chat</span>`;}el.innerHTML=`${ai}<div class="compose-box">${fields}<div class="compose-toolbar">${tb}</div><textarea class="compose-textarea" rows="2" placeholder="${ph}" id="compose-input" ${c.channel==='sms'?'oninput="updateSMS()"':''}></textarea><div class="compose-footer">${cl}<span class="compose-hint" style="margin-left:auto">⌘+Enter</span>${cc?'<span style="margin-left:8px">'+cc+'</span>':''}<button class="send-btn">${sl} ${I.send}</button></div></div>`;}
+function mkTB(items){const m={bold:`<button>${I.bold}</button>`,italic:`<button>${I.italic}</button>`,attach:`<button>${I.attach}</button>`,image:`<button>${I.image}</button>`,emoji:`<button>${I.emoji}</button>`,divider:'<div class="divider"></div>'};return items.map(i=>m[i]||'').join('');}
+function mkAI(c){return `<div class="ai-block" id="ai-block"><div class="ai-label">${I.star} ${c.channel==='post'?'AI SUGGESTED DRAFT':'AI SUGGESTED REPLY'}</div><div class="ai-draft">"${c.aiDraft}"</div><div class="ai-actions"><button class="ai-use-btn" onclick="useSuggestion()">Use Suggestion</button><button class="ai-dismiss-btn" onclick="dismissAI()">Dismiss</button></div></div>`;}
+
+// === COL 3 ===
+function renderCol3(c){const el=document.getElementById('col3-inner');if(c.channel==='post'){el.innerHTML=`<div class="section-label">Audience Overview</div><div class="context-card"><div style="font-size:14px;font-weight:500;color:#0C2D3F;margin-bottom:4px">24 tenants · Skyline Lofts</div><div style="font-size:12px;color:#6B7280">All units included</div></div><div class="section-label">Delivery Stats</div><div class="context-card"><div class="delivery-stat-row"><div class="delivery-stat-dot" style="background:#1A5235"></div><span><strong>24</strong> in-app</span></div><div class="delivery-stat-row"><div class="delivery-stat-dot" style="background:#0E6B7A"></div><span><strong>18</strong> email · <span style="color:#B91C1C">2 bounced</span></span></div><div class="delivery-stat-row"><div class="delivery-stat-dot" style="background:#6D28D9"></div><span><strong>6</strong> SMS · <span style="color:#B91C1C">1 failed</span></span></div></div><div class="section-label">Read Rate</div><div class="context-card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><span style="font-size:20px;font-weight:600;color:#1A5235">75%</span><span style="font-size:12px;color:#22C55E;font-weight:500">↑ from 68%</span></div><div class="progress-bar"><div class="progress-fill" style="width:75%"></div></div><div style="font-size:12px;color:#9CA3AF;margin-top:4px">18 of 24 tenants</div></div><div class="section-label">Recent Posts</div><div class="context-card" style="padding:12px 16px"><div class="recent-post-row"><div class="recent-post-title">Elevator Maintenance — Oct 28th</div><div class="recent-post-meta">Oct 15 · 75% read</div></div><div class="recent-post-row"><div class="recent-post-title">Holiday Parking Policy</div><div class="recent-post-meta">Oct 1 · 68% read</div></div><div class="recent-post-row"><div class="recent-post-title">Fire Safety Inspection</div><div class="recent-post-meta">Sep 20 · 82% read</div></div></div>`;return;}
+if(c.channel==='system'){el.innerHTML='<div style="text-align:center;color:#9CA3AF;padding:40px 0;font-size:13px">No tenant context for system alerts.</div>';return;}
+const p=c.prop;el.innerHTML=`<div class="section-label">Property Context</div><div class="context-card"><div style="display:flex;align-items:center;gap:10px;margin-bottom:14px"><div style="width:36px;height:36px;background:#E8F4ED;border-radius:8px;display:flex;align-items:center;justify-content:center">${I.home}</div><div><div style="font-size:14px;font-weight:500;color:#0C2D3F">${p.name}</div><div style="font-size:12px;color:#6B7280">${p.unit}</div></div></div><div style="display:flex;flex-direction:column;gap:8px"><div class="context-row"><div class="context-row-icon">${I.calendar}</div><div><div class="context-row-label">Lease Ends</div><div class="context-row-value">${p.leaseEnd} <span style="color:#9CA3AF">(${p.leaseLeft})</span></div></div></div><div class="context-row"><div class="context-row-icon">${I.dollar}</div><div><div class="context-row-label">Monthly Rent</div><div style="display:flex;align-items:center;gap:6px"><span class="context-row-value lg">${p.rent}</span><span style="font-size:12px;font-weight:500;color:${p.rentColor}">· ${p.rentStatus}</span></div></div></div><div class="context-row"><div class="context-row-icon">${I.lockSmall}</div><div><div class="context-row-label">Security Deposit</div><div class="context-row-value">${p.deposit}</div></div></div></div><div class="stat-grid"><div class="stat-cell"><div class="val">2 Open</div><div class="lbl">Service Requests</div></div><div class="stat-cell"><div class="val" style="color:#1A5235">0 Days</div><div class="lbl">Delinquency</div></div></div><div class="insurance-row">${I.shield}<span class="insurance-badge">Insurance Verified</span><span style="font-size:12px;color:#6B7280;margin-left:auto">🐕 1 Pet</span></div></div><div class="section-label">Sentiment</div><div class="context-card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px;font-weight:500;color:#374151">Sentiment Score</span><span style="font-size:12px;font-weight:600;color:#1A5235">92%</span></div><div class="sentiment-bar"><div class="sentiment-fill" style="width:92%"></div></div><div style="font-size:11px;color:#9CA3AF;margin-top:4px">Highly satisfied · last 3 interactions</div></div><div class="section-label">Recent Activity</div><div class="context-card"><div class="activity-row"><div style="display:flex;align-items:center;gap:8px">${I.wrench}<span style="font-size:12px;color:#374151">Kitchen Leak</span></div><span class="status-chip status-open">Open</span></div><div class="activity-row"><div style="display:flex;align-items:center;gap:8px">${I.bulb}<span style="font-size:12px;color:#374151">AC Filter Check</span></div><span class="status-chip status-pending">Pending</span></div><div class="activity-row"><div style="display:flex;align-items:center;gap:8px">${I.doc}<span style="font-size:12px;color:#374151">Lease Extension</span></div><span class="status-chip status-closed">Closed</span></div></div><div class="section-label">Recent Documents</div><div class="context-card"><div class="doc-row">${I.file}<span style="font-size:12px;color:#374151;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Lease_Renewal_2024.pdf</span><span style="color:#9CA3AF;cursor:pointer">${I.download}</span></div><div class="doc-row">${I.imgfile}<span style="font-size:12px;color:#374151;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Move_In_Inspection.jpg</span><span style="color:#9CA3AF;cursor:pointer">${I.download}</span></div></div>`;}
+
+// === INTERACTIONS ===
+function selectConv(id){
+  cur=id; emailReplyOpen=false;
+  document.querySelectorAll('.conv-card').forEach(c=>c.classList.remove('selected'));
+  document.getElementById('card-'+id)?.classList.add('selected');
+  const c=convs[id];
+  renderHeader(c); renderBody(c); renderCompose(c); renderCol3(c);
+  if(isMobile()) document.getElementById('hub').classList.add('show-conv');
+}
+function goBack(){document.getElementById('hub').classList.remove('show-conv');}
+function setFilter(type,el){document.querySelectorAll('.filter-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');document.querySelectorAll('.conv-card').forEach(card=>{card.style.display=type==='all'?'':card.getAttribute('data-type')===type?'':'none';});}
+function toggleEm(id){const b=document.getElementById(id+'-b'),ch=document.getElementById(id+'-ch');if(b.style.display==='none'){b.style.display='';ch.classList.add('open');}else{b.style.display='none';ch.classList.remove('open');}}
+function toggleReadList(){readListOpen=!readListOpen;const l=document.getElementById('read-list');l.style.display=readListOpen?'':'none';l.previousElementSibling.textContent=readListOpen?'Hide tenant list ↑':'Show tenant list ↓';}
+function openEmailReply(){emailReplyOpen=true;renderCompose(convs[cur]);document.getElementById('compose-input')?.focus();}
+function dismissAI(){const b=document.getElementById('ai-block');if(b)b.style.display='none';}
+function useSuggestion(){const c=convs[cur],inp=document.getElementById('compose-input');if(c.aiDraft&&inp){inp.value=c.aiDraft;inp.focus();if(c.channel==='sms')updateSMS();}dismissAI();}
+function updateSMS(){const inp=document.getElementById('compose-input'),ctr=document.getElementById('sms-counter');if(!inp||!ctr)return;const txt=inp.value,uni=/[^\x00-\x7F]/.test(txt),lim=uni?70:160,len=txt.length,seg=Math.max(1,Math.ceil(len/lim));ctr.textContent=`${len} / ${lim} · ${seg} seg${seg>1?'s':''}`;ctr.className='char-counter '+(len<=(uni?60:140)?'ok':len<=lim?'warn':'over');}
+function openDrawer(){drawerOpen=true;document.getElementById('col3').classList.add('open');document.getElementById('col3-backdrop').classList.add('visible');document.getElementById('drawer-close').style.display='';}
+function closeDrawer(){drawerOpen=false;document.getElementById('col3').classList.remove('open');document.getElementById('col3-backdrop').classList.remove('visible');document.getElementById('drawer-close').style.display='none';}
+
+// Handle drawer close/show based on resize
+function handleResize(){
+  const w=window.innerWidth;
+  const dc=document.getElementById('drawer-close');
+  if(w>=1280){document.getElementById('col3').classList.remove('open');document.getElementById('col3-backdrop').classList.remove('visible');dc.style.display='none';drawerOpen=false;}
+  if(w>=768)document.getElementById('hub').classList.remove('show-conv');
+}
+window.addEventListener('resize',handleResize);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&drawerOpen)closeDrawer();});
+
+// INIT
+buildCards();
+selectConv('sarah');
+if(!isMobile()) document.getElementById('hub').classList.remove('show-conv');
+</script>
+</body>
+</html>
