@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Innago — Inbox Evolution v3</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #E8EBED; height: 100vh; overflow: hidden; display: flex;
+}
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 2px; }
+
+:root {
+  --ink: #0C2D3F; --ink2: #374151; --ink3: #6B7280; --ink4: #9CA3AF;
+  --accent: #1A5235; --accent-bg: #E8F4ED;
+  --surface: #FFFFFF; --hover: #F9FAFB; --active: #F3F4F6;
+  --border: #E5E7EB; --border-lt: #F3F4F6; --page: #F4F5F6;
+  --online: #22C55E; --pin: #6366F1; --pin-bg: #EEF2FF;
+  --danger: #EF4444; --danger-bg: #FEF2F2;
+  --chat-bg: #EEF2FF; --chat: #4338CA;
+  --email-bg: #E0F3F5; --email: #0E6B7A;
+  --sms-bg: #F5F0FF; --sms: #6D28D9;
+  --sys-bg: #F3F4F6; --sys: #374151;
+  --maint-bg: #FFF3E0; --maint: #B45309;
+  --bill-bg: #EEF2FF; --bill: #4338CA;
+  --lease-bg: #F0FDF4; --lease: #166534;
+  --renew-bg: #FFF7ED; --renew: #9A3412;
+  --gen-bg: #F3F4F6; --gen: #374151;
+  --move-bg: #FCE7F3; --move: #BE185D;
+  --screen-bg: #ECFDF5; --screen: #065F46;
+  --r: 8px; --r-sm: 4px; --r-pill: 20px;
+  --shadow: 0 4px 16px rgba(0,0,0,0.10); --tr: 0.15s ease;
+}
+
+/* LAYOUT */
+.hub { display: flex; width: 100%; height: 100vh; }
+.col1 {
+  width: 320px; flex-shrink: 0; background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; z-index: 2; position: relative;
+}
+.col2 {
+  flex: 1; min-width: 0; background: var(--page);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.col3 {
+  width: 320px; flex-shrink: 0; background: var(--surface);
+  border-left: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+}
+.col-placeholder { color: var(--ink4); font-size: 13px; text-align: center; padding: 40px; line-height: 1.6; }
+.col-placeholder svg { margin-bottom: 12px; opacity: 0.25; }
+
+/* INBOX HEADER */
+.inbox-hdr { padding: 16px 16px 0; flex-shrink: 0; }
+.inbox-title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.inbox-title { font-size: 18px; font-weight: 700; color: var(--ink); letter-spacing: -0.02em; }
+.inbox-badge {
+  font-size: 11px; font-weight: 600; background: var(--accent); color: #fff;
+  padding: 2px 8px; border-radius: var(--r-pill);
+}
+.search-wrap { position: relative; margin-bottom: 10px; }
+.search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--ink4); pointer-events: none; }
+.search-input {
+  width: 100%; background: var(--hover); border: 1px solid var(--border); border-radius: var(--r);
+  padding: 8px 12px 8px 34px; font-size: 13px; font-family: inherit; color: var(--ink);
+  transition: border-color var(--tr), background var(--tr), box-shadow var(--tr);
+}
+.search-input::placeholder { color: var(--ink4); }
+.search-input:focus { outline: none; border-color: var(--accent); background: var(--surface); box-shadow: 0 0 0 3px rgba(26,82,53,0.08); }
+
+.active-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+.active-chips:empty { display: none; margin: 0; }
+.a-chip {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 11px; font-weight: 500; padding: 2px 6px 2px 8px;
+  border-radius: var(--r-pill); background: var(--accent-bg); color: var(--accent);
+  border: 1px solid rgba(26,82,53,0.12); animation: chipPop 0.2s ease;
+}
+@keyframes chipPop { from { opacity:0; transform:scale(0.92); } to { opacity:1; transform:scale(1); } }
+.a-chip button {
+  display: flex; align-items: center; justify-content: center;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: none; border: none; cursor: pointer;
+  color: var(--accent); font-size: 9px; padding: 0; transition: background var(--tr);
+}
+.a-chip button:hover { background: rgba(26,82,53,0.12); }
+
+/* TOOLBAR */
+.toolbar { padding: 0 16px 8px; flex-shrink: 0; }
+.channel-row { display: flex; align-items: center; gap: 4px; margin-bottom: 8px; }
+.ch-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 4px; flex: 1 1 0; min-width: 0;
+  font-size: 12px; font-weight: 500; font-family: inherit;
+  padding: 5px 4px; border-radius: var(--r);
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--ink3); cursor: pointer; transition: all var(--tr); white-space: nowrap;
+}
+.ch-btn:hover { background: var(--hover); color: var(--ink2); }
+.ch-btn.on { background: var(--accent-bg); border-color: rgba(26,82,53,0.2); color: var(--accent); font-weight: 600; }
+.ch-btn .b {
+  font-size: 10px; font-weight: 700; background: var(--accent); color: #fff;
+  padding: 0 5px; border-radius: 10px; min-width: 16px; text-align: center; line-height: 16px;
+}
+.ctrl-row { display: flex; align-items: center; gap: 6px; }
+.ctrl-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 500; font-family: inherit;
+  padding: 4px 8px; border-radius: var(--r);
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--ink3); cursor: pointer; transition: all var(--tr); white-space: nowrap;
+}
+.ctrl-btn:hover { background: var(--hover); color: var(--ink2); }
+.ctrl-btn.has-filters { background: var(--accent-bg); border-color: rgba(26,82,53,0.2); color: var(--accent); font-weight: 600; }
+.ctrl-btn .ctrl-count {
+  font-size: 9px; font-weight: 700; background: var(--accent); color: #fff;
+  width: 16px; height: 16px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.ctrl-spacer { flex: 1; }
+.results-ct { font-size: 11px; color: var(--ink4); }
+
+/* SORT DROPDOWN */
+.sort-anchor { position: relative; }
+.sort-dd {
+  position: absolute; top: calc(100% + 4px); left: 0;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); box-shadow: var(--shadow);
+  min-width: 170px; padding: 4px; z-index: 60; display: none;
+}
+.sort-dd.open { display: block; animation: ddIn 0.12s ease; }
+@keyframes ddIn { from { opacity:0; transform:translateY(-3px); } to { opacity:1; transform:translateY(0); } }
+.sort-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 10px; font-size: 12px; color: var(--ink);
+  cursor: pointer; border-radius: var(--r-sm); transition: background var(--tr);
+}
+.sort-item:hover { background: var(--hover); }
+.sort-item.on { color: var(--accent); font-weight: 600; }
+.sort-item .ck { color: var(--accent); opacity: 0; }
+.sort-item.on .ck { opacity: 1; }
+
+/* ============================================ */
+/* SELECTION MODE — ACTION BAR                  */
+/* ============================================ */
+.action-bar {
+  display: none; flex-direction: column; gap: 0;
+  flex-shrink: 0; animation: barIn 0.2s ease;
+}
+@keyframes barIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
+.action-bar.vis { display: flex; }
+
+/* Top banner — prominent, colored, unmissable */
+.ab-top {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 16px;
+  background: var(--ink); color: #fff;
+  margin: 0 -0px;
+}
+.ab-close {
+  display: flex; align-items: center; gap: 4px;
+  border: none; background: rgba(255,255,255,0.12); border-radius: var(--r);
+  cursor: pointer; color: #fff; font-family: inherit;
+  font-size: 12px; font-weight: 500; padding: 5px 10px;
+  transition: background var(--tr);
+}
+.ab-close:hover { background: rgba(255,255,255,0.2); }
+.ab-count {
+  font-size: 13px; font-weight: 700; color: #fff; flex: 1; text-align: center;
+  letter-spacing: -0.01em;
+}
+.ab-count span { color: #7DD3A0; }
+.ab-select-all {
+  display: flex; align-items: center; gap: 4px;
+  border: 1px solid rgba(255,255,255,0.25); background: transparent; border-radius: var(--r);
+  cursor: pointer; color: #fff; font-family: inherit;
+  font-size: 12px; font-weight: 500; padding: 5px 10px;
+  transition: all var(--tr);
+}
+.ab-select-all:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.4); }
+
+.ab-actions {
+  display: flex; align-items: center; gap: 2px;
+  padding: 8px 16px 6px; flex-wrap: wrap;
+}
+.ab-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 500; font-family: inherit;
+  padding: 6px 10px; border-radius: var(--r);
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--ink3); cursor: pointer; transition: all var(--tr); white-space: nowrap;
+  position: relative;
+}
+.ab-btn:hover { background: var(--hover); color: var(--ink); border-color: #D1D5DB; }
+.ab-btn.ab-archive:hover { background: #FEF2F2; color: var(--danger); border-color: rgba(239,68,68,0.2); }
+.ab-btn.ab-pin:hover { background: var(--pin-bg); color: var(--pin); border-color: rgba(99,102,241,0.2); }
+.ab-btn.disabled {
+  opacity: 0.4; pointer-events: none;
+}
+
+/* Re-categorize dropdown inside action bar */
+.recat-anchor { position: relative; }
+.recat-dd {
+  position: absolute; top: calc(100% + 4px); left: 0;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); box-shadow: var(--shadow);
+  min-width: 160px; padding: 4px; z-index: 60; display: none;
+}
+.recat-dd.open { display: block; animation: ddIn 0.12s ease; }
+.recat-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 10px; font-size: 12px; color: var(--ink);
+  cursor: pointer; border-radius: var(--r-sm); transition: background var(--tr);
+}
+.recat-item:hover { background: var(--hover); }
+.recat-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+
+/* ============================================ */
+/* FILTER PANEL                                 */
+/* ============================================ */
+.filter-panel {
+  position: absolute; top: 0; left: 0; bottom: 0;
+  width: 100%; background: var(--surface);
+  z-index: 50; display: none; flex-direction: column;
+  animation: panelSlide 0.2s ease;
+}
+@keyframes panelSlide { from { opacity:0; transform:translateX(-8px); } to { opacity:1; transform:translateX(0); } }
+.filter-panel.open { display: flex; }
+.fp-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.fp-title { font-size: 15px; font-weight: 700; color: var(--ink); }
+.fp-close {
+  width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+  border: none; background: var(--hover); cursor: pointer;
+  border-radius: var(--r); color: var(--ink3); transition: all var(--tr);
+}
+.fp-close:hover { background: var(--active); color: var(--ink); }
+.fp-body { flex: 1; overflow-y: auto; padding: 8px 0; }
+.fp-section { border-bottom: 1px solid var(--border-lt); }
+.fp-section:last-child { border-bottom: none; }
+.fp-section-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px 6px; cursor: pointer; user-select: none;
+}
+.fp-section-hdr:hover .fp-section-title { color: var(--ink); }
+.fp-section-title {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--ink3);
+  display: flex; align-items: center; gap: 6px; transition: color var(--tr);
+}
+.fp-section-title .sel-count {
+  font-size: 9px; font-weight: 700; background: var(--accent); color: #fff;
+  padding: 0 5px; border-radius: 8px; line-height: 15px; display: none;
+}
+.fp-section-title .sel-count.vis { display: inline; }
+.fp-chevron { color: var(--ink4); transition: transform 0.2s ease; display: flex; }
+.fp-section.collapsed .fp-chevron { transform: rotate(-90deg); }
+.fp-section.collapsed .fp-section-body { display: none; }
+.fp-section-body { padding: 0 12px 8px; }
+.fp-search { position: relative; margin-bottom: 4px; }
+.fp-search input {
+  width: 100%; padding: 6px 10px 6px 28px; font-size: 12px; font-family: inherit;
+  border: 1px solid var(--border); border-radius: var(--r);
+  background: var(--hover); color: var(--ink); transition: border-color var(--tr), background var(--tr);
+}
+.fp-search input::placeholder { color: var(--ink4); }
+.fp-search input:focus { outline: none; border-color: var(--accent); background: var(--surface); }
+.fp-search svg { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: var(--ink4); pointer-events: none; }
+.fp-opt {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 6px; border-radius: var(--r-sm);
+  cursor: pointer; transition: background var(--tr); user-select: none;
+}
+.fp-opt:hover { background: var(--hover); }
+.fp-opt.on { background: var(--accent-bg); }
+.fp-cb {
+  width: 16px; height: 16px; border-radius: 3px;
+  border: 1.5px solid #D1D5DB; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; transition: all var(--tr);
+}
+.fp-opt.on .fp-cb { background: var(--accent); border-color: var(--accent); }
+.fp-cb svg { opacity: 0; transition: opacity var(--tr); }
+.fp-opt.on .fp-cb svg { opacity: 1; }
+.fp-opt-label { font-size: 13px; color: var(--ink); flex: 1; display: flex; align-items: center; gap: 6px; }
+.fp-opt-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+.fp-opt-count { font-size: 11px; color: var(--ink4); flex-shrink: 0; }
+.fp-radio {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 1.5px solid #D1D5DB; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; transition: all var(--tr);
+}
+.fp-opt.on .fp-radio { border-color: var(--accent); }
+.fp-radio-dot { width: 8px; height: 8px; border-radius: 50%; background: transparent; transition: background var(--tr); }
+.fp-opt.on .fp-radio-dot { background: var(--accent); }
+.fp-opt-list { max-height: 180px; overflow-y: auto; }
+.fp-opt-list.short { max-height: none; }
+.fp-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px; border-top: 1px solid var(--border); flex-shrink: 0;
+}
+.fp-clear {
+  font-size: 12px; font-weight: 500; color: var(--ink3);
+  background: none; border: none; cursor: pointer; font-family: inherit;
+  padding: 6px 10px; border-radius: var(--r); transition: all var(--tr);
+}
+.fp-clear:hover { background: var(--hover); color: var(--ink); }
+.fp-apply {
+  font-size: 12px; font-weight: 600; color: #fff;
+  background: var(--ink); border: none; cursor: pointer; font-family: inherit;
+  padding: 7px 18px; border-radius: var(--r); transition: background var(--tr);
+}
+.fp-apply:hover { background: #0E3A50; }
+
+/* ============================================ */
+/* CONVERSATION LIST                            */
+/* ============================================ */
+.conv-list { flex: 1; overflow-y: auto; overflow-x: hidden; }
+.grp-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 16px 6px; background: var(--hover);
+  border-bottom: 1px solid var(--border-lt);
+  position: sticky; top: 0; z-index: 5; cursor: default; user-select: none;
+}
+.grp-label {
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.04em; color: var(--ink3);
+}
+.grp-count {
+  font-size: 10px; font-weight: 600; background: var(--active); color: var(--ink3);
+  padding: 1px 7px; border-radius: 10px;
+}
+.grp-hdr.pinned-hdr { background: #FAFAFF; }
+.grp-hdr.pinned-hdr .grp-label { color: var(--pin); }
+.grp-hdr.pinned-hdr .grp-count { background: var(--pin-bg); color: var(--pin); }
+
+/* CONVERSATION CARD */
+.conv-card {
+  padding: 10px 16px; cursor: pointer;
+  border-left: 3px solid transparent;
+  border-bottom: 1px solid var(--border-lt);
+  transition: background var(--tr); position: relative;
+}
+.conv-card:hover { background: var(--hover); }
+.conv-card.sel { background: var(--surface); border-left-color: var(--accent); }
+.conv-card.pin-card { background: #FCFCFF; border-left-color: var(--pin); }
+.conv-card.pin-card:hover { background: #F8F8FF; }
+
+/* Selection mode card highlight */
+.conv-card.checked { background: #F0FAF4; border-left-color: var(--accent); }
+.conv-card.checked:hover { background: #E5F5EC; }
+
+.card-row { display: flex; align-items: flex-start; gap: 10px; }
+
+/* AVATAR WRAP — checkbox overlays avatar on hover */
+.avatar-wrap {
+  width: 38px; height: 38px; flex-shrink: 0;
+  position: relative; cursor: pointer;
+}
+.card-cb {
+  position: absolute; inset: 0;
+  width: 38px; height: 38px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all var(--tr);
+  border: 2px solid #D1D5DB; background: var(--surface);
+  opacity: 0; z-index: 2;
+}
+.card-cb svg { opacity: 0; transition: opacity var(--tr); }
+.card-cb.on { background: var(--accent); border-color: var(--accent); opacity: 1; }
+.card-cb.on svg { opacity: 1; }
+
+/* Hover avatar area → show checkbox overlay */
+.avatar-wrap:hover .card-cb { opacity: 1; }
+.avatar-wrap:hover .avatar { opacity: 0; }
+
+/* In selection mode: always show checkboxes */
+.selecting .card-cb { opacity: 1; }
+.selecting .avatar { opacity: 0; }
+
+.avatar {
+  width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 600; color: #fff; position: relative;
+  transition: opacity var(--tr);
+}
+.online-dot {
+  width: 9px; height: 9px; background: var(--online);
+  border-radius: 50%; border: 2px solid var(--surface);
+  position: absolute; bottom: -1px; right: -1px;
+}
+.card-body { flex: 1; min-width: 0; }
+.card-name-row { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
+.card-name {
+  font-size: 13px; font-weight: 600; color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0;
+}
+.ch-chip {
+  display: inline-flex; font-size: 9px; font-weight: 700;
+  padding: 1px 6px; border-radius: 3px;
+  letter-spacing: 0.04em; text-transform: uppercase; flex-shrink: 0;
+}
+.ch-chip.chat { background: var(--chat-bg); color: var(--chat); }
+.ch-chip.email { background: var(--email-bg); color: var(--email); }
+.ch-chip.sms { background: var(--sms-bg); color: var(--sms); }
+.ch-chip.system { background: var(--sys-bg); color: var(--sys); border: 1px solid var(--border); }
+.card-meta {
+  font-size: 11px; color: var(--ink3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px;
+}
+.card-preview-row { display: flex; align-items: center; gap: 6px; }
+.card-preview {
+  font-size: 12px; color: var(--ink4);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;
+}
+.card-time { font-size: 11px; color: var(--ink4); white-space: nowrap; flex-shrink: 0; }
+.card-bottom { display: flex; align-items: center; gap: 6px; margin-top: 5px; }
+.lbl {
+  display: inline-flex; font-size: 9px; font-weight: 700;
+  padding: 2px 7px; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.04em;
+}
+.lbl-maint { background: var(--maint-bg); color: var(--maint); }
+.lbl-bill { background: var(--bill-bg); color: var(--bill); }
+.lbl-lease { background: var(--lease-bg); color: var(--lease); }
+.lbl-renew { background: var(--renew-bg); color: var(--renew); }
+.lbl-gen { background: var(--gen-bg); color: var(--gen); }
+.lbl-move { background: var(--move-bg); color: var(--move); }
+.lbl-screen { background: var(--screen-bg); color: var(--screen); }
+.unread-dot {
+  width: 8px; height: 8px; background: var(--online);
+  border-radius: 50%; flex-shrink: 0; margin-left: auto;
+}
+.needs-reply {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 9px; font-weight: 600;
+  color: var(--danger); background: var(--danger-bg);
+  padding: 1px 6px; border-radius: 3px;
+}
+.pin-icon {
+  position: absolute; top: 10px; right: 10px;
+  color: var(--pin); opacity: 0.5; display: none;
+}
+.conv-card.pin-card .pin-icon { display: block; }
+
+/* Single-card hover actions */
+.card-acts {
+  position: absolute; top: 8px; right: 8px;
+  display: flex; gap: 2px; opacity: 0; transition: opacity var(--tr);
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 2px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.conv-card:hover .card-acts { opacity: 1; }
+.conv-card:hover .pin-icon { display: none; }
+/* Hide hover actions in selection mode */
+.selecting .card-acts { display: none !important; }
+.ca-btn {
+  width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;
+  border: none; background: none; cursor: pointer; border-radius: var(--r-sm);
+  color: var(--ink4); transition: all var(--tr); padding: 0;
+}
+.ca-btn:hover { background: var(--active); color: var(--ink); }
+.ca-btn.ca-pin:hover { color: var(--pin); background: var(--pin-bg); }
+.ca-btn.ca-archive:hover { color: var(--danger); background: var(--danger-bg); }
+
+/* FOOTER */
+.col1-footer { padding: 12px 16px; border-top: 1px solid var(--border); flex-shrink: 0; }
+.new-msg {
+  background: var(--ink); color: #fff; font-size: 13px; font-weight: 600; font-family: inherit;
+  padding: 10px; border-radius: var(--r); cursor: pointer; text-align: center;
+  border: none; width: 100%; transition: background var(--tr);
+}
+.new-msg:hover { background: #0E3A50; }
+
+/* TOAST */
+.toast-wrap {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  z-index: 200; pointer-events: none;
+}
+.toast {
+  display: none; align-items: center; gap: 10px;
+  background: var(--ink); color: #fff;
+  padding: 10px 16px; border-radius: var(--r);
+  font-size: 13px; font-weight: 500;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  pointer-events: auto;
+  animation: toastIn 0.25s ease;
+}
+@keyframes toastIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+.toast.vis { display: flex; }
+.toast-undo {
+  font-size: 12px; font-weight: 600; color: #7DD3A0;
+  background: none; border: none; cursor: pointer; font-family: inherit;
+  padding: 2px 6px; border-radius: var(--r-sm); transition: background var(--tr);
+}
+.toast-undo:hover { background: rgba(255,255,255,0.1); }
+.toast-dismiss {
+  color: var(--ink4); background: none; border: none; cursor: pointer; padding: 2px;
+  display: flex; align-items: center;
+}
+
+/* PROTO BANNER */
+.proto {
+  background: #FFFBEB; border-bottom: 1px solid #FDE68A;
+  padding: 7px 16px; font-size: 11px; color: #92400E;
+  flex-shrink: 0; display: flex; align-items: center; gap: 6px;
+}
+</style>
+</head>
+<body>
+
+<div class="hub">
+  <div class="col1" id="col1">
+
+    <div class="proto">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <span><strong>v3</strong> — Selection Mode + Bulk Actions</span>
+    </div>
+
+    <div class="inbox-hdr">
+      <div class="inbox-title-row">
+        <span class="inbox-title">Inbox</span>
+        <span class="inbox-badge" id="unreadBadge">6 unread</span>
+      </div>
+      <div class="search-wrap">
+        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input class="search-input" type="text" placeholder="Search messages, residents, units..." id="searchInput">
+      </div>
+      <div class="active-chips" id="activeChips"></div>
+    </div>
+
+    <!-- Normal toolbar (hidden when selecting) -->
+    <div class="toolbar" id="normalToolbar">
+      <div class="channel-row">
+        <button class="ch-btn on" data-ch="all" onclick="setCh(this)">All <span class="b">12</span></button>
+        <button class="ch-btn" data-ch="chat" onclick="setCh(this)">Chat <span class="b">4</span></button>
+        <button class="ch-btn" data-ch="email" onclick="setCh(this)">Email <span class="b">4</span></button>
+        <button class="ch-btn" data-ch="sms" onclick="setCh(this)">SMS <span class="b">3</span></button>
+        <button class="ch-btn" data-ch="system" onclick="setCh(this)">Sys <span class="b">1</span></button>
+      </div>
+      <div class="ctrl-row">
+        <button class="ctrl-btn" id="filterToggle" onclick="openPanel()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          Filters
+        </button>
+        <div class="sort-anchor">
+          <button class="ctrl-btn" onclick="toggleSort(event)">
+            Sort: <strong id="sortLbl">Recent</strong>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="sort-dd" id="sortDD">
+            <div class="sort-item on" onclick="pickSort('Recent',this)">Most recent<svg class="ck" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+            <div class="sort-item" onclick="pickSort('Oldest unread',this)">Oldest unread first<svg class="ck" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+            <div class="sort-item" onclick="pickSort('Tenant A→Z',this)">Tenant A → Z<svg class="ck" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+            <div class="sort-item" onclick="pickSort('Property A→Z',this)">Property A → Z<svg class="ck" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+          </div>
+        </div>
+        <span class="ctrl-spacer"></span>
+        <span class="results-ct" id="resultsCt">12 conversations</span>
+      </div>
+    </div>
+
+    <!-- ACTION BAR (visible when selecting) -->
+    <div class="action-bar" id="actionBar">
+      <div class="ab-top">
+        <button class="ab-close" onclick="exitSelection()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          Cancel
+        </button>
+        <span class="ab-count"><span id="selCount">0</span> selected</span>
+        <button class="ab-select-all" onclick="selectAllVisible()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          Select all
+        </button>
+      </div>
+      <div class="ab-actions">
+        <button class="ab-btn ab-archive" onclick="bulkArchive()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+          Archive
+        </button>
+        <button class="ab-btn" onclick="bulkMarkRead()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span id="readLabel">Mark read</span>
+        </button>
+        <div class="recat-anchor">
+          <button class="ab-btn" onclick="toggleRecat(event)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+            Category
+          </button>
+          <div class="recat-dd" id="recatDD"></div>
+        </div>
+        <button class="ab-btn ab-pin" onclick="bulkPin()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 2l-4 4-6 2-2 2 5 5-5 7 7-5 5 5 2-2 2-6 4-4-8-8z"/></svg>
+          Pin
+        </button>
+        <button class="ab-btn disabled" title="Requires RBAC (v2)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
+          Reassign
+        </button>
+      </div>
+    </div>
+
+    <div class="conv-list" id="convList"></div>
+
+    <div class="col1-footer">
+      <button class="new-msg">+ New Message</button>
+    </div>
+
+    <!-- FILTER PANEL -->
+    <div class="filter-panel" id="filterPanel">
+      <div class="fp-header">
+        <span class="fp-title">Filters & Grouping</span>
+        <button class="fp-close" onclick="closePanel()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="fp-body" id="fpBody"></div>
+      <div class="fp-footer">
+        <button class="fp-clear" onclick="clearAll()">Clear all</button>
+        <button class="fp-apply" id="fpApply" onclick="applyAndClose()">Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="col2">
+    <div class="col-placeholder">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <div>Content area<br><span style="font-size:11px;color:var(--ink4);">Select a conversation</span></div>
+    </div>
+  </div>
+
+  <div class="col3">
+    <div class="col-placeholder">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div>Context panel<br><span style="font-size:11px;color:var(--ink4);">Tenant context, sentiment</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast-wrap">
+  <div class="toast" id="toast">
+    <span id="toastMsg"></span>
+    <button class="toast-undo" id="toastUndo" onclick="undoAction()">Undo</button>
+    <button class="toast-dismiss" onclick="hideToast()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+</div>
+
+<script>
+// ============================================
+// DATA
+// ============================================
+const PROPERTIES = [
+  { id:'sunset', name:'Sunset Apartments', color:'#B45309' },
+  { id:'oakridge', name:'Oak Ridge Condos', color:'#0E6B7A' },
+  { id:'maple', name:'Maple Grove Villas', color:'#166534' },
+  { id:'riverside', name:'Riverside Towers', color:'#6D28D9' },
+  { id:'parkview', name:'Park View Estates', color:'#4338CA' },
+  { id:'harbor', name:'Harbor Point Suites', color:'#0C2D3F' },
+  { id:'cedar', name:'Cedar Lane Homes', color:'#9A3412' },
+  { id:'willow', name:'Willow Creek Place', color:'#065F46' },
+  { id:'highland', name:'Highland Ridge', color:'#BE185D' },
+  { id:'brookside', name:'Brookside Commons', color:'#7C3AED' },
+  { id:'lakewood', name:'Lakewood Terrace', color:'#1D4ED8' },
+  { id:'summit', name:'Summit Flats', color:'#B91C1C' },
+];
+const CATEGORIES = [
+  { id:'maintenance', name:'Maintenance', color:'var(--maint)', dot:'#B45309' },
+  { id:'billing', name:'Billing', color:'var(--bill)', dot:'#4338CA' },
+  { id:'lease', name:'Lease', color:'var(--lease)', dot:'#166534' },
+  { id:'renewal', name:'Renewal', color:'var(--renew)', dot:'#9A3412' },
+  { id:'general', name:'General', color:'var(--gen)', dot:'#374151' },
+  { id:'movein', name:'Move-in', color:'var(--move)', dot:'#BE185D' },
+  { id:'moveout', name:'Move-out', color:'var(--move)', dot:'#BE185D' },
+  { id:'screening', name:'Screening', color:'var(--screen)', dot:'#065F46' },
+];
+const STATUSES = [
+  { id:'unread', name:'Unread only' },
+  { id:'needs-response', name:'Needs response' },
+  { id:'pinned', name:'Pinned only' },
+];
+const GROUP_OPTIONS = [
+  { id:'none', name:'No grouping' },
+  { id:'property', name:'Group by property' },
+  { id:'category', name:'Group by category' },
+];
+
+let conversations = [
+  { id:1, name:'Alice Johnson', initials:'AJ', avatarBg:'#1A5235', online:true, channel:'chat', property:'sunset', unit:'Unit 4B', category:'maintenance', preview:'The kitchen faucet is leaking again...', time:'12m ago', unread:true, needsReply:true, pinned:false, archived:false },
+  { id:2, name:'Carol Davis', initials:'CD', avatarBg:'#0E6B7A', online:false, channel:'sms', property:'oakridge', unit:'Unit 2C', category:'maintenance', preview:'Hi, the hallway light on the 2nd floor...', time:'42m ago', unread:true, needsReply:true, pinned:false, archived:false },
+  { id:3, name:'Bob Martinez', initials:'BM', avatarBg:'#4338CA', online:false, channel:'email', property:'sunset', unit:'Unit 7A', category:'billing', preview:'Re: Question about late fee on March inv...', time:'2h ago', unread:true, needsReply:false, pinned:false, archived:false },
+  { id:4, name:'Carol Davis', initials:'CD', avatarBg:'#0E6B7A', online:true, channel:'email', property:'oakridge', unit:'Unit 2C', category:'lease', preview:'Re: Lease renewal — 12 month option', time:'3h ago', unread:false, needsReply:false, pinned:true, archived:false },
+  { id:5, name:'Tom Rodriguez', initials:'TR', avatarBg:'#B45309', online:false, channel:'chat', property:'maple', unit:'Unit 11', category:'maintenance', preview:'The AC unit in the living room is making...', time:'Yesterday', unread:true, needsReply:true, pinned:false, archived:false },
+  { id:6, name:'Sarah Kim', initials:'SK', avatarBg:'#6D28D9', online:false, channel:'sms', property:'riverside', unit:'Unit 8D', category:'renewal', preview:'Got it, I\'ll review the renewal terms...', time:'Yesterday', unread:false, needsReply:false, pinned:false, archived:false },
+  { id:7, name:'Alice Johnson', initials:'AJ', avatarBg:'#1A5235', online:true, channel:'system', property:'sunset', unit:'Unit 4B', category:'general', preview:'March rent payment has been processed', time:'1 Apr', unread:false, needsReply:false, pinned:false, archived:false },
+  { id:8, name:'Mike Chen', initials:'MC', avatarBg:'#1D4ED8', online:false, channel:'email', property:'parkview', unit:'Unit 3A', category:'movein', preview:'When can I pick up the keys for the unit?', time:'1 Apr', unread:true, needsReply:true, pinned:false, archived:false },
+  { id:9, name:'Lisa Patel', initials:'LP', avatarBg:'#BE185D', online:false, channel:'chat', property:'harbor', unit:'Unit 12F', category:'maintenance', preview:'The garbage disposal is jammed again...', time:'31 Mar', unread:false, needsReply:false, pinned:false, archived:false },
+  { id:10, name:'James Wilson', initials:'JW', avatarBg:'#065F46', online:false, channel:'email', property:'cedar', unit:'Unit 5', category:'billing', preview:'Can I get a breakdown of the charges?', time:'31 Mar', unread:true, needsReply:false, pinned:false, archived:false },
+  { id:11, name:'Emily Torres', initials:'ET', avatarBg:'#7C3AED', online:true, channel:'chat', property:'willow', unit:'Unit 2B', category:'lease', preview:'Thanks for sending the addendum, looks...', time:'30 Mar', unread:false, needsReply:false, pinned:false, archived:false },
+  { id:12, name:'David Nguyen', initials:'DN', avatarBg:'#9A3412', online:false, channel:'sms', property:'highland', unit:'Unit 7', category:'moveout', preview:'Confirmed — move out date is April 30', time:'29 Mar', unread:false, needsReply:false, pinned:false, archived:false },
+];
+
+// ============================================
+// STATE
+// ============================================
+let state = {
+  channel: 'all', categories: new Set(), statuses: new Set(),
+  properties: new Set(), groupBy: 'none', search: '', selected: 1,
+};
+let selecting = false;
+let checked = new Set();
+let lastAction = null; // for undo
+let toastTimer = null;
+let pending = {};
+
+function cloneState() {
+  return { categories: new Set(state.categories), statuses: new Set(state.statuses), properties: new Set(state.properties), groupBy: state.groupBy };
+}
+
+// ============================================
+// SELECTION MODE
+// ============================================
+function enterSelection(id) {
+  selecting = true;
+  checked.clear();
+  if (id) checked.add(id);
+  document.getElementById('col1').classList.add('selecting');
+  document.getElementById('normalToolbar').style.display = 'none';
+  document.getElementById('actionBar').classList.add('vis');
+  updateSelectionUI();
+  renderList();
+}
+
+function exitSelection() {
+  selecting = false;
+  checked.clear();
+  document.getElementById('col1').classList.remove('selecting');
+  document.getElementById('normalToolbar').style.display = '';
+  document.getElementById('actionBar').classList.remove('vis');
+  renderList();
+}
+
+function toggleCheck(id, e) {
+  if (e) e.stopPropagation();
+  if (!selecting) {
+    enterSelection(id);
+    return;
+  }
+  if (checked.has(id)) checked.delete(id);
+  else checked.add(id);
+  if (checked.size === 0) { exitSelection(); return; }
+  updateSelectionUI();
+  // Update visual without full re-render
+  const el = document.querySelector(`.conv-card[data-id="${id}"]`);
+  if (el) {
+    el.classList.toggle('checked', checked.has(id));
+    const cb = el.querySelector('.card-cb');
+    if (cb) cb.classList.toggle('on', checked.has(id));
+  }
+}
+
+function selectAllVisible() {
+  const filtered = getFiltered();
+  filtered.forEach(c => checked.add(c.id));
+  updateSelectionUI();
+  renderList();
+}
+
+function updateSelectionUI() {
+  document.getElementById('selCount').textContent = checked.size;
+  // Update read/unread label based on majority
+  const selConvos = conversations.filter(c => checked.has(c.id));
+  const unreadCount = selConvos.filter(c => c.unread).length;
+  document.getElementById('readLabel').textContent = unreadCount > selConvos.length / 2 ? 'Mark read' : 'Mark unread';
+}
+
+function onCardClick(id) {
+  if (selecting) {
+    toggleCheck(id);
+  } else {
+    state.selected = id;
+    document.querySelectorAll('.conv-card').forEach(c => c.classList.toggle('sel', parseInt(c.dataset.id) === id));
+  }
+}
+
+// ============================================
+// BULK ACTIONS
+// ============================================
+function bulkArchive() {
+  const ids = [...checked];
+  const snapshot = ids.map(id => {
+    const c = conversations.find(x => x.id === id);
+    return { id, archived: c.archived };
+  });
+  ids.forEach(id => { const c = conversations.find(x => x.id === id); if (c) c.archived = true; });
+  lastAction = { type: 'archive', data: snapshot };
+  showToast(`${ids.length} conversation${ids.length > 1 ? 's' : ''} archived`);
+  exitSelection();
+  renderList();
+}
+
+function bulkMarkRead() {
+  const ids = [...checked];
+  const selConvos = conversations.filter(c => checked.has(c.id));
+  const unreadCount = selConvos.filter(c => c.unread).length;
+  const markAs = unreadCount > selConvos.length / 2; // true = mark read, false = mark unread
+  const snapshot = ids.map(id => {
+    const c = conversations.find(x => x.id === id);
+    return { id, unread: c.unread };
+  });
+  ids.forEach(id => { const c = conversations.find(x => x.id === id); if (c) c.unread = !markAs; });
+  lastAction = { type: 'read', data: snapshot };
+  showToast(`${ids.length} marked as ${markAs ? 'read' : 'unread'}`);
+  exitSelection();
+  renderList();
+}
+
+function bulkPin() {
+  const ids = [...checked];
+  const selConvos = conversations.filter(c => checked.has(c.id));
+  const pinnedCount = selConvos.filter(c => c.pinned).length;
+  const pinTo = pinnedCount < selConvos.length / 2;
+  const snapshot = ids.map(id => {
+    const c = conversations.find(x => x.id === id);
+    return { id, pinned: c.pinned };
+  });
+  ids.forEach(id => { const c = conversations.find(x => x.id === id); if (c) c.pinned = pinTo; });
+  lastAction = { type: 'pin', data: snapshot };
+  showToast(`${ids.length} ${pinTo ? 'pinned' : 'unpinned'}`);
+  exitSelection();
+  renderList();
+}
+
+function bulkRecategorize(catId) {
+  const ids = [...checked];
+  const snapshot = ids.map(id => {
+    const c = conversations.find(x => x.id === id);
+    return { id, category: c.category };
+  });
+  const catName = CATEGORIES.find(c => c.id === catId)?.name || catId;
+  ids.forEach(id => { const c = conversations.find(x => x.id === id); if (c) c.category = catId; });
+  lastAction = { type: 'recat', data: snapshot };
+  showToast(`${ids.length} moved to ${catName}`);
+  closeRecat();
+  exitSelection();
+  renderList();
+}
+
+// ============================================
+// UNDO
+// ============================================
+function undoAction() {
+  if (!lastAction) return;
+  if (lastAction.type === 'archive') {
+    lastAction.data.forEach(s => { const c = conversations.find(x => x.id === s.id); if (c) c.archived = s.archived; });
+  } else if (lastAction.type === 'read') {
+    lastAction.data.forEach(s => { const c = conversations.find(x => x.id === s.id); if (c) c.unread = s.unread; });
+  } else if (lastAction.type === 'pin') {
+    lastAction.data.forEach(s => { const c = conversations.find(x => x.id === s.id); if (c) c.pinned = s.pinned; });
+  } else if (lastAction.type === 'recat') {
+    lastAction.data.forEach(s => { const c = conversations.find(x => x.id === s.id); if (c) c.category = s.category; });
+  }
+  lastAction = null;
+  hideToast();
+  renderList();
+}
+
+// ============================================
+// TOAST
+// ============================================
+function showToast(msg) {
+  clearTimeout(toastTimer);
+  document.getElementById('toastMsg').textContent = msg;
+  document.getElementById('toast').classList.add('vis');
+  toastTimer = setTimeout(hideToast, 5000);
+}
+function hideToast() {
+  clearTimeout(toastTimer);
+  document.getElementById('toast').classList.remove('vis');
+}
+
+// ============================================
+// RECATEGORIZE DROPDOWN
+// ============================================
+function toggleRecat(e) {
+  e.stopPropagation();
+  const dd = document.getElementById('recatDD');
+  if (dd.classList.contains('open')) { closeRecat(); return; }
+  let h = '';
+  CATEGORIES.forEach(c => {
+    h += `<div class="recat-item" onclick="bulkRecategorize('${c.id}')">
+      <span class="recat-dot" style="background:${c.dot}"></span>${c.name}
+    </div>`;
+  });
+  dd.innerHTML = h;
+  dd.classList.add('open');
+}
+function closeRecat() { document.getElementById('recatDD').classList.remove('open'); }
+
+// ============================================
+// FILTER LOGIC
+// ============================================
+function getFiltered() {
+  return conversations.filter(c => {
+    if (c.archived) return false;
+    if (state.channel !== 'all' && c.channel !== state.channel) return false;
+    if (state.categories.size > 0 && !state.categories.has(c.category)) return false;
+    if (state.properties.size > 0 && !state.properties.has(c.property)) return false;
+    if (state.statuses.has('unread') && !c.unread) return false;
+    if (state.statuses.has('needs-response') && !c.needsReply) return false;
+    if (state.statuses.has('pinned') && !c.pinned) return false;
+    if (state.search) {
+      const h = (c.name + c.property + c.unit + c.preview + c.category).toLowerCase();
+      if (!h.includes(state.search)) return false;
+    }
+    return true;
+  });
+}
+
+// ============================================
+// RENDER LIST
+// ============================================
+function renderList() {
+  const list = document.getElementById('convList');
+  const filtered = getFiltered();
+  const pinned = filtered.filter(c => c.pinned);
+  const unpinned = filtered.filter(c => !c.pinned);
+  let html = '';
+
+  if (state.groupBy === 'none') {
+    if (pinned.length > 0) {
+      html += `<div class="grp-hdr pinned-hdr"><span class="grp-label">📌 Pinned</span><span class="grp-count">${pinned.length}</span></div>`;
+      pinned.forEach(c => html += cardHTML(c, true));
+    }
+    if (unpinned.length > 0 || pinned.length > 0) {
+      html += `<div class="grp-hdr"><span class="grp-label">Recent</span><span class="grp-count">${unpinned.length}</span></div>`;
+    }
+    unpinned.forEach(c => html += cardHTML(c, false));
+  } else {
+    const all = [...pinned, ...unpinned];
+    const groups = {};
+    const map = {};
+    if (state.groupBy === 'property') {
+      PROPERTIES.forEach(p => map[p.id] = p.name);
+      all.forEach(c => { if (!groups[c.property]) groups[c.property] = []; groups[c.property].push(c); });
+    } else {
+      CATEGORIES.forEach(ct => map[ct.id] = ct.name);
+      all.forEach(c => { if (!groups[c.category]) groups[c.category] = []; groups[c.category].push(c); });
+    }
+    Object.keys(groups).sort((a,b) => (map[a]||a).localeCompare(map[b]||b)).forEach(key => {
+      html += `<div class="grp-hdr"><span class="grp-label">${map[key]||key}</span><span class="grp-count">${groups[key].length}</span></div>`;
+      groups[key].forEach(c => html += cardHTML(c, c.pinned));
+    });
+  }
+
+  if (filtered.length === 0) {
+    html = `<div style="padding:40px 20px;text-align:center;">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--ink4)" stroke-width="1.5" style="opacity:0.3;margin-bottom:8px"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <div style="font-size:13px;color:var(--ink3);font-weight:500;">No conversations match</div>
+      <div style="font-size:12px;color:var(--ink4);margin-top:4px;">Try adjusting your filters</div>
+    </div>`;
+  }
+
+  list.innerHTML = html;
+  document.getElementById('resultsCt').textContent = filtered.length + ' conversation' + (filtered.length !== 1 ? 's' : '');
+}
+
+function cardHTML(c, isPinned) {
+  const propMap = {}; PROPERTIES.forEach(p => propMap[p.id] = p.name);
+  const catClass = { maintenance:'lbl-maint', billing:'lbl-bill', lease:'lbl-lease', renewal:'lbl-renew', general:'lbl-gen', movein:'lbl-move', moveout:'lbl-move', screening:'lbl-screen' };
+  const catLabel = {}; CATEGORIES.forEach(ct => catLabel[ct.id] = ct.name);
+  const isChecked = checked.has(c.id);
+
+  return `<div class="conv-card${c.id===state.selected && !selecting?' sel':''}${isPinned?' pin-card':''}${isChecked?' checked':''}" data-id="${c.id}" onclick="onCardClick(${c.id})">
+    ${isPinned && !selecting?'<svg class="pin-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M16 2l-4 4-6 2-2 2 5 5-5 7 7-5 5 5 2-2 2-6 4-4-8-8z"/></svg>':''}
+    <div class="card-acts">
+      <button class="ca-btn ca-pin" onclick="event.stopPropagation();singlePin(${c.id})" title="${isPinned?'Unpin':'Pin'}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 2l-4 4-6 2-2 2 5 5-5 7 7-5 5 5 2-2 2-6 4-4-8-8z"/></svg></button>
+      <button class="ca-btn ca-archive" onclick="event.stopPropagation();singleArchive(${c.id})" title="Archive"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg></button>
+    </div>
+    <div class="card-row">
+      <div class="avatar-wrap" onclick="toggleCheck(${c.id},event)">
+        <div class="card-cb${isChecked?' on':''}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div class="avatar" style="background:${c.avatarBg}">${c.initials}${c.online&&c.channel==='chat'?'<div class="online-dot"></div>':''}</div>
+      </div>
+      <div class="card-body">
+        <div class="card-name-row">
+          <span class="card-name">${c.name}</span>
+          <span class="ch-chip ${c.channel}">${c.channel==='system'?'Sys':c.channel.charAt(0).toUpperCase()+c.channel.slice(1)}</span>
+        </div>
+        <div class="card-meta">${propMap[c.property]||c.property} · ${c.unit}</div>
+        <div class="card-preview-row">
+          <span class="card-preview">${c.preview}</span>
+          <span class="card-time">${c.time}</span>
+        </div>
+        <div class="card-bottom">
+          <span class="lbl ${catClass[c.category]||'lbl-gen'}">${catLabel[c.category]||c.category}</span>
+          ${c.needsReply?'<span class="needs-reply"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Needs reply</span>':''}
+          ${c.unread?'<span class="unread-dot" style="margin-left:auto"></span>':''}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// Single-card actions
+function singleArchive(id) {
+  const c = conversations.find(x => x.id === id);
+  if (!c) return;
+  lastAction = { type: 'archive', data: [{ id, archived: c.archived }] };
+  c.archived = true;
+  showToast('1 conversation archived');
+  renderList();
+}
+function singlePin(id) {
+  const c = conversations.find(x => x.id === id);
+  if (!c) return;
+  c.pinned = !c.pinned;
+  renderList();
+}
+
+// ============================================
+// CHANNEL / SORT / SEARCH
+// ============================================
+function setCh(btn) {
+  state.channel = btn.dataset.ch;
+  document.querySelectorAll('.ch-btn').forEach(b => b.classList.toggle('on', b === btn));
+  renderList();
+}
+function toggleSort(e) { e.stopPropagation(); document.getElementById('sortDD').classList.toggle('open'); }
+function pickSort(label, el) {
+  document.getElementById('sortLbl').textContent = label;
+  el.closest('.sort-dd').querySelectorAll('.sort-item').forEach(i => i.classList.remove('on'));
+  el.classList.add('on');
+  document.getElementById('sortDD').classList.remove('open');
+}
+document.addEventListener('click', () => {
+  document.getElementById('sortDD').classList.remove('open');
+  closeRecat();
+});
+document.getElementById('searchInput').addEventListener('input', function(e) {
+  state.search = e.target.value.toLowerCase();
+  renderList();
+});
+
+// ============================================
+// FILTER PANEL (same as v2)
+// ============================================
+function renderPanel() {
+  const b = document.getElementById('fpBody');
+  let h = '';
+  h += `<div class="fp-section"><div class="fp-section-hdr" onclick="toggleSection(this)"><span class="fp-section-title">Category <span class="sel-count" id="catCount"></span></span><span class="fp-chevron"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></span></div><div class="fp-section-body"><div class="fp-opt-list short">`;
+  CATEGORIES.forEach(c => {
+    h += `<div class="fp-opt${pending.categories.has(c.id)?' on':''}" data-type="category" data-id="${c.id}" onclick="toggleOpt(this)"><span class="fp-cb"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span><span class="fp-opt-label"><span class="fp-opt-dot" style="background:${c.dot}"></span>${c.name}</span><span class="fp-opt-count">${conversations.filter(x=>!x.archived&&x.category===c.id).length}</span></div>`;
+  });
+  h += `</div></div></div>`;
+  h += `<div class="fp-section"><div class="fp-section-hdr" onclick="toggleSection(this)"><span class="fp-section-title">Property <span class="sel-count" id="propCount"></span></span><span class="fp-chevron"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></span></div><div class="fp-section-body"><div class="fp-search"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg><input type="text" placeholder="Search properties..." oninput="filterProperties(this.value)"></div><div class="fp-opt-list" id="propList">`;
+  PROPERTIES.forEach(p => {
+    const ct = conversations.filter(x=>!x.archived&&x.property===p.id).length;
+    h += `<div class="fp-opt${pending.properties.has(p.id)?' on':''}" data-type="property" data-id="${p.id}" onclick="toggleOpt(this)"><span class="fp-cb"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span><span class="fp-opt-label"><span class="fp-opt-dot" style="background:${p.color}"></span>${p.name}</span><span class="fp-opt-count">${ct}</span></div>`;
+  });
+  h += `</div></div></div>`;
+  h += `<div class="fp-section"><div class="fp-section-hdr" onclick="toggleSection(this)"><span class="fp-section-title">Status <span class="sel-count" id="statCount"></span></span><span class="fp-chevron"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></span></div><div class="fp-section-body"><div class="fp-opt-list short">`;
+  STATUSES.forEach(s => {
+    h += `<div class="fp-opt${pending.statuses.has(s.id)?' on':''}" data-type="status" data-id="${s.id}" onclick="toggleOpt(this)"><span class="fp-cb"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span><span class="fp-opt-label">${s.name}</span></div>`;
+  });
+  h += `</div></div></div>`;
+  h += `<div class="fp-section"><div class="fp-section-hdr" onclick="toggleSection(this)"><span class="fp-section-title">Group conversations by</span><span class="fp-chevron"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></span></div><div class="fp-section-body"><div class="fp-opt-list short">`;
+  GROUP_OPTIONS.forEach(g => {
+    h += `<div class="fp-opt${pending.groupBy===g.id?' on':''}" data-type="group" data-id="${g.id}" onclick="pickGroup(this,'${g.id}')"><span class="fp-radio"><span class="fp-radio-dot"></span></span><span class="fp-opt-label">${g.name}</span></div>`;
+  });
+  h += `</div></div></div>`;
+  b.innerHTML = h;
+  updatePanelCounts(); updateApplyBtn();
+}
+function toggleSection(hdr) { hdr.closest('.fp-section').classList.toggle('collapsed'); }
+function toggleOpt(el) {
+  const type = el.dataset.type, id = el.dataset.id;
+  const set = type==='category'?pending.categories:type==='property'?pending.properties:pending.statuses;
+  if (set.has(id)) { set.delete(id); el.classList.remove('on'); } else { set.add(id); el.classList.add('on'); }
+  updatePanelCounts(); updateApplyBtn();
+}
+function pickGroup(el, id) {
+  pending.groupBy = id;
+  el.closest('.fp-opt-list').querySelectorAll('.fp-opt').forEach(o => o.classList.remove('on'));
+  el.classList.add('on'); updateApplyBtn();
+}
+function filterProperties(term) {
+  const t = term.toLowerCase();
+  document.querySelectorAll('#propList .fp-opt').forEach(el => {
+    el.style.display = el.querySelector('.fp-opt-label').textContent.toLowerCase().includes(t) ? '' : 'none';
+  });
+}
+function updatePanelCounts() {
+  const cc=document.getElementById('catCount'), pc=document.getElementById('propCount'), sc=document.getElementById('statCount');
+  if(cc){cc.textContent=pending.categories.size;cc.classList.toggle('vis',pending.categories.size>0);}
+  if(pc){pc.textContent=pending.properties.size;pc.classList.toggle('vis',pending.properties.size>0);}
+  if(sc){sc.textContent=pending.statuses.size;sc.classList.toggle('vis',pending.statuses.size>0);}
+}
+function updateApplyBtn() {
+  const t = pending.categories.size+pending.statuses.size+pending.properties.size+(pending.groupBy!=='none'?1:0);
+  document.getElementById('fpApply').textContent = t>0?`Apply (${t})`:'Apply';
+}
+function openPanel() { pending=cloneState(); renderPanel(); document.getElementById('filterPanel').classList.add('open'); }
+function closePanel() { document.getElementById('filterPanel').classList.remove('open'); }
+function applyAndClose() {
+  state.categories=new Set(pending.categories); state.statuses=new Set(pending.statuses);
+  state.properties=new Set(pending.properties); state.groupBy=pending.groupBy;
+  closePanel(); renderChips(); renderList(); updateFilterToggle();
+}
+function clearAll() { pending.categories.clear(); pending.statuses.clear(); pending.properties.clear(); pending.groupBy='none'; renderPanel(); }
+function updateFilterToggle() {
+  const t = state.categories.size+state.statuses.size+state.properties.size+(state.groupBy!=='none'?1:0);
+  const btn = document.getElementById('filterToggle');
+  btn.classList.toggle('has-filters', t>0);
+  btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>Filters${t>0?' <span class="ctrl-count">'+t+'</span>':''}`;
+}
+function renderChips() {
+  const c = document.getElementById('activeChips'); c.innerHTML = '';
+  const labels = {};
+  CATEGORIES.forEach(x=>labels[x.id]=x.name); PROPERTIES.forEach(x=>labels[x.id]=x.name);
+  STATUSES.forEach(x=>labels[x.id]=x.name); GROUP_OPTIONS.forEach(x=>labels[x.id]=x.name);
+  const add = (type, id) => { const el=document.createElement('span'); el.className='a-chip'; el.innerHTML=`${labels[id]||id}<button onclick="removeChip('${type}','${id}')">✕</button>`; c.appendChild(el); };
+  state.categories.forEach(x=>add('category',x)); state.properties.forEach(x=>add('property',x)); state.statuses.forEach(x=>add('status',x));
+  if (state.groupBy !== 'none') {
+    const el=document.createElement('span'); el.className='a-chip';
+    el.style.background='#EEF2FF'; el.style.color='#4338CA'; el.style.borderColor='rgba(99,102,241,0.15)';
+    el.innerHTML=`Grouped: ${labels[state.groupBy]}<button style="color:#4338CA" onclick="removeChip('group','${state.groupBy}')">✕</button>`; c.appendChild(el);
+  }
+}
+function removeChip(type, id) {
+  if(type==='category')state.categories.delete(id);else if(type==='property')state.properties.delete(id);
+  else if(type==='status')state.statuses.delete(id);else if(type==='group')state.groupBy='none';
+  renderChips(); renderList(); updateFilterToggle();
+}
+
+// INIT
+renderList();
+</script>
+</body>
+</html>
