@@ -5069,7 +5069,7 @@ let state = {
   // v5.33 — per-view grouping preferences (unchanged)
   allGroupBy: 'none',   // 'none' | 'property' — for All view
   chatGroupBy: 'none',  // 'none' | 'property' — for Chat view
-  aiDismissed: new Set(),  // row ids where AI was dismissed this session
+  aiDismissed: new Map(),  // Map<convId, { dismissedAtMsgIdx }> — shared across all views per Shell §10 (v1.3)
   // ----- v5.9 chat workspace state -----
   chatSelectedTenant: null,    // tenantId of the chat currently open in convo pane
   chatSelectedGroup: null,     // groupId — when set, group conversation is open instead
@@ -5103,7 +5103,7 @@ let state = {
   smsListMode: 'list',         // 'list' | 'picker-sms'
   smsPickerSearch: '',
   smsPickerPropFilter: '',
-  smsAiDismissed: new Set(),   // tenantIds where SMS AI suggestion was dismissed
+  // smsAiDismissed REMOVED v1.3 — AI dismissal is shared via state.aiDismissed (Shell §10)
   // ----- v5.26 SMS filters (SMS-scoped, independent of shared chat/all filters) -----
   smsFilters: {
     properties: new Set(),     // property names
@@ -5126,7 +5126,7 @@ let state = {
   emailExpandedMsgs: new Set(),   // message ids currently expanded in cascade
   emailTrailExpanded: false,      // whether composer mail trail is expanded
   emailQuoteExpanded: new Set(),  // message ids with quote trail expanded in thread view
-  emailAiDismissed: new Set(),    // thread ids where AI suggested reply was dismissed
+  // emailAiDismissed REMOVED v1.3 — AI dismissal is shared via state.aiDismissed (Shell §10)
   emailExtBannerDismissed: new Set(), // thread ids where external banner was dismissed
   emailPinned: new Set(),         // thread ids pinned (session-persistent; Shell §7.7)
   emailPinnedCollapsed: false,    // v5.35 — whether Pinned section is collapsed
@@ -5792,7 +5792,7 @@ function useAISuggestion(rowId) {
 }
 
 function dismissAISuggestion(rowId) {
-  state.aiDismissed.add(rowId);
+  state.aiDismissed.set(rowId, { dismissedAtMsgIdx: 0 });  // shared Map per Shell §10
   const block = document.getElementById('aiBlock');
   if (block) block.style.display = 'none';
 }
@@ -7544,7 +7544,7 @@ function useAISuggestionInChat(rowId) {
 }
 
 function dismissAISuggestionInChat(rowId) {
-  state.aiDismissed.add(rowId);
+  state.aiDismissed.set(rowId, { dismissedAtMsgIdx: 0 });  // shared Map per Shell §10
   const block = document.getElementById('aiBlock');
   if (block) block.style.display = 'none';
 }
@@ -9082,7 +9082,7 @@ function renderSMSConversation() {
   // AI suggestion (only if sendable AND a suggestion exists AND not dismissed AND has unreplied inbound)
   let aiHtml = '';
   const hasUnreplied = msgs.some(m => m.who === 'in') && (msgs[msgs.length - 1]?.who === 'in');
-  if (avail.sendable && SMS_AI_SUGGESTIONS[tenantId] && !state.smsAiDismissed.has(tenantId) && hasUnreplied) {
+  if (avail.sendable && SMS_AI_SUGGESTIONS[tenantId] && !state.aiDismissed.has(tenantId) && hasUnreplied) {
     const sparkle = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5z"/></svg>';
     aiHtml = `
       <div class="cv-ai-strip">
@@ -9453,12 +9453,12 @@ function useSMSAISuggestion(tenantId) {
     ta.setSelectionRange(ta.value.length, ta.value.length);
     onSMSComposerInput(); // triggers counter update + send button state
   }
-  state.smsAiDismissed.add(tenantId);
+  state.aiDismissed.set(tenantId, { dismissedAtMsgIdx: 0 });  // shared Map per Shell §10
   renderSMSConversation();
 }
 
 function dismissSMSAISuggestion(tenantId) {
-  state.smsAiDismissed.add(tenantId);
+  state.aiDismissed.set(tenantId, { dismissedAtMsgIdx: 0 });  // shared Map per Shell §10
   renderSMSConversation();
 }
 
@@ -9986,7 +9986,7 @@ function renderEmailConvo() {
   // AI suggested reply
   let aiHtml = '';
   const hasUnreplied = lastMsg.from !== 'Me' && !thread.replied;
-  if (EMAIL_AI_SUGGESTIONS[threadId] && !state.emailAiDismissed.has(threadId) && hasUnreplied) {
+  if (EMAIL_AI_SUGGESTIONS[threadId] && !state.aiDismissed.has(threadId) && hasUnreplied) {
     const sparkle = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5z"/></svg>';
     aiHtml = `<div class="et-ai-card"><div class="et-ai-label">${sparkle} AI suggested reply</div><div class="et-ai-body">${escapeHtml(EMAIL_AI_SUGGESTIONS[threadId])}</div><div class="et-ai-actions"><button class="et-ai-btn primary" onclick="useEmailAIDraft('${threadId}')">Use draft</button><button class="et-ai-btn ghost" onclick="dismissEmailAI('${threadId}')">Dismiss</button></div></div>`;
   }
@@ -10241,8 +10241,7 @@ function dismissEmailExtBanner(threadId) {
 }
 
 function dismissEmailAI(threadId) {
-  state.emailAiDismissed.add(threadId);
-  state.aiDismissed.add(threadId); // shared set per Shell §10
+  state.aiDismissed.set(threadId, { dismissedAtMsgIdx: 0 });  // shared Map per Shell §10 (v1.3)
   renderEmailConvo();
 }
 
